@@ -1,0 +1,1 @@
+- [] Automatize Agda installation procedure
