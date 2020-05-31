@@ -5,7 +5,7 @@ module Avionics.Probability where
 open import Data.Nat using (ℕ; zero; suc)
 open import Relation.Unary using (_∈_)
 
-open import Avionics.Real using (ℝ; _+_; [0,∞⟩; [0,1])
+open import Avionics.Real using (ℝ; _+_; _-_; _*_; _÷_; _^_; √_; 1/_; -1/2; π; e; 2ℝ; [0,∞⟩; [0,1])
 
 --postulate
 --  Vec : Set → ℕ → Set
@@ -32,7 +32,7 @@ record NormalDist : Set where
   dist : Dist ℝ
   dist = record
     {
-      pdf = ? -- λ x → 1/ (σ * √(2 * pi)) * e ^ (- 1/2 * ((x - μ) ÷ σ) ^ 2)
+      pdf = λ x → 1/ (σ * √(2ℝ * π)) * e ^ (-1/2 * ((x - μ) ÷ σ) ^ 2ℝ)
     ; cdf = ?
     ; pdf→[0,∞⟩ = ?
     ; cdf→[0,1] = ?
