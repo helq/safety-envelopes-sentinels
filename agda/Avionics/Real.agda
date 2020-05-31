@@ -14,9 +14,9 @@ postulate
   fromFloat : Float → ℝ 
   toFloat : ℝ → Float
 
-  _<_ : ℝ → ℝ → Bool
+  _<_ _≤_ : ℝ → ℝ → Bool
   _+_ _-_ _*_ _^_ : ℝ → ℝ → ℝ
-  e π : ℝ
+  e π 0ℝ : ℝ
 
   --The following require a lot of care to work properly
   --Check Data/Rational/Base.agda for examples of how to care
@@ -32,6 +32,7 @@ postulate
 {-# COMPILE GHC toFloat = \x -> x #-}
 
 {-# COMPILE GHC _<_ = (<) #-}
+{-# COMPILE GHC _≤_ = (<=) #-}
 
 {-# COMPILE GHC _+_ = (+) #-}
 {-# COMPILE GHC _-_ = (-) #-}
@@ -40,6 +41,7 @@ postulate
 
 {-# COMPILE GHC e = 2.71828182845904523536 #-}
 {-# COMPILE GHC π = 3.14159265358979323846 #-}
+{-# COMPILE GHC 0ℝ = 0 #-}
 
 Subset : Set → Set _
 Subset A = Pred A 0ℓ

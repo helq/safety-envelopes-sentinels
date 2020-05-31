@@ -21,11 +21,12 @@ record Dist (Input : Set) : Set where
     --∫pdf[-∞,∞]≡1ℝ : ∫ pdf [ -∞ , ∞ ] ≡ 1ℝ
 
 record NormalDist : Set where
+  constructor ND
   field
     μ : ℝ
     σ : ℝ
-    --σ≠0 : {}
-    -- TODO: Add proof that σ ≠ 0
+    --σ>0 : {}
+    -- TODO: Add proof that σ > 0
     --       Should use: https://agda.readthedocs.io/en/v2.6.1/language/irrelevance.html
 
   dist : Dist ℝ

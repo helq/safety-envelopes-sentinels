@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f0b9ff77aa84f1ab30fa3f2e57745f2d774a0bfd31f6929708cb46924fbdb7fa
+-- hash: a124d5077fb1671377428b7ed4fcd0a1c285122b76a91c10d935c766d0d295a2
 
 name:           sentinels
 version:        0.1.0.0
@@ -27,7 +27,6 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
       MAlonzo.Code.Agda.Builtin.Bool
       MAlonzo.Code.Agda.Builtin.Char
       MAlonzo.Code.Agda.Builtin.Equality
@@ -158,13 +157,16 @@ library
       MAlonzo.Code.Relation.Unary.Properties
       MAlonzo.Code.Strict
       MAlonzo.RTE
+      SafetyEnvelopes
   other-modules:
       Paths_sentinels
   hs-source-dirs:
       src
+  ghc-options: -fwarn-incomplete-patterns -fno-warn-overlapping-patterns
   build-depends:
       base >=4.7 && <5
     , ieee754 >=0.7.8 && <0.9
+    , pipes
     , text >=1.2.3.1 && <1.3
   default-language: Haskell2010
 
@@ -177,9 +179,8 @@ executable sentinels-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , ieee754 >=0.7.8 && <0.9
+    , pipes
     , sentinels
-    , text >=1.2.3.1 && <1.3
   default-language: Haskell2010
 
 test-suite sentinels-test
@@ -192,7 +193,6 @@ test-suite sentinels-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , ieee754 >=0.7.8 && <0.9
+    , pipes
     , sentinels
-    , text >=1.2.3.1 && <1.3
   default-language: Haskell2010
