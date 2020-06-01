@@ -52,6 +52,8 @@ postulate
 {-# COMPILE GHC _*_ = (*) #-}
 {-# COMPILE GHC _^_ = (**) #-}
 
+{-# COMPILE GHC _^2 = (**2) #-}
+
 {-# COMPILE GHC e = 2.71828182845904523536 #-}
 {-# COMPILE GHC π = 3.14159265358979323846 #-}
 {-# COMPILE GHC 0ℝ = 0 #-}

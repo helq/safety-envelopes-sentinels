@@ -1,22 +1,32 @@
 module SafetyEnvelopes
-    ( check
+    ( checkMean
+    , checkSample
     ) where
 
 import Data.Maybe (fromMaybe)
 
-import MAlonzo.Code.Avionics.SafetyEnvelopes (meanCF)
+import MAlonzo.Code.Avionics.SafetyEnvelopes (meanCF, sampleCF)
 
-check :: Int -> Double -> Double -> (Double, Bool)
-check n mul x = fromMaybe (x, False) $ check_cf n mul x
+checkMean :: Int -> Double -> Double -> (Double, Bool)
+checkMean n mul x = fromMaybe (-1, False) $ check_mean_cf n mul x
+
+checkSample :: Int -> Double -> Double -> [Double] -> (Double, Bool)
+checkSample n m_mean m_var = fromMaybe (-1, False) . check_sample_cf n m_mean m_var
 
 check_all :: Double -> Double -> (Double, Bool)
 check_all mul = meanCF (zip (concat means) (concat stds)) mul
 
-check_cf :: Int -> Double -> Double -> Maybe (Double, Bool)
-check_cf n mul x = do
+check_mean_cf :: Int -> Double -> Double -> Maybe (Double, Bool)
+check_mean_cf n mul x = do
   means_ <- means `at` n
   stds_ <- stds `at` n
   return $ meanCF (zip means_ stds_) mul x
+
+check_sample_cf :: Int -> Double -> Double -> [Double] -> Maybe (Double, Bool)
+check_sample_cf n mul_mean mul_var xs = do
+  means_ <- means `at` n
+  stds_ <- stds `at` n
+  return $ sampleCF (zip means_ stds_) mul_mean mul_var xs
 
 at :: [a] -> Int -> Maybe a
 xs `at` i
