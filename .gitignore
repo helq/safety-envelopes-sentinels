@@ -2,3 +2,6 @@
 *~
 *.agdai
 src/MAlonzo
+
+.mypy_cache
+__pycache__

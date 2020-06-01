@@ -4,19 +4,19 @@ module SafetyEnvelopes
 
 import Data.Maybe (fromMaybe)
 
-import MAlonzo.Code.Avionics.SafetyEnvelopes (consistencyenvelope)
+import MAlonzo.Code.Avionics.SafetyEnvelopes (meanCF)
 
 check :: Int -> Double -> Double -> (Double, Bool)
 check n mul x = fromMaybe (x, False) $ check_cf n mul x
 
 check_all :: Double -> Double -> (Double, Bool)
-check_all mul = consistencyenvelope (zip (concat means) (concat stds)) mul
+check_all mul = meanCF (zip (concat means) (concat stds)) mul
 
 check_cf :: Int -> Double -> Double -> Maybe (Double, Bool)
 check_cf n mul x = do
   means_ <- means `at` n
   stds_ <- stds `at` n
-  return $ consistencyenvelope (zip means_ stds_) mul x
+  return $ meanCF (zip means_ stds_) mul x
 
 at :: [a] -> Int -> Maybe a
 xs `at` i

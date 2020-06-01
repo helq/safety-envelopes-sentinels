@@ -1,6 +1,7 @@
 module Avionics.Real where
 
 open import Data.Bool using (Bool)
+open import Data.Nat using (ℕ)
 open import Data.Float using (Float)
 open import Level using (0ℓ; _⊔_) renaming (suc to lsuc)
 open import Relation.Unary using (Pred; _∈_)
@@ -16,9 +17,11 @@ postulate
   ℝ : Set
   fromFloat : Float → ℝ 
   toFloat : ℝ → Float
+  fromℕ : ℕ → ℝ
 
   _<_ _≤_ : ℝ → ℝ → Bool
   _+_ _-_ _*_ _^_ : ℝ → ℝ → ℝ
+  _^2 : ℝ → ℝ
   e π 0ℝ 1ℝ -1/2 2ℝ : ℝ
 
   [0,∞⟩ [0,1] : Subset ℝ
@@ -39,6 +42,7 @@ postulate
 {-# COMPILE GHC ℝ = type Double #-}
 {-# COMPILE GHC fromFloat = \x -> x #-}
 {-# COMPILE GHC toFloat = \x -> x #-}
+{-# COMPILE GHC fromℕ = fromIntegral #-}
 
 {-# COMPILE GHC _<_ = (<) #-}
 {-# COMPILE GHC _≤_ = (<=) #-}
