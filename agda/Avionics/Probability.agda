@@ -1,11 +1,19 @@
 {-# OPTIONS --allow-unsolved-metas #-}
 
+-- Careful with this: https://github.com/agda/agda/issues/543
+-- Not necessary since Agda: 2.6.1
+{-# OPTIONS --irrelevant-projections #-}
+
 module Avionics.Probability where
 
 open import Data.Nat using (ℕ; zero; suc)
 open import Relation.Unary using (_∈_)
 
-open import Avionics.Real using (ℝ; _+_; _-_; _*_; _÷_; _^_; √_; 1/_; -1/2; π; e; 2ℝ; [0,∞⟩; [0,1])
+open import Avionics.Real using (
+    ℝ; _+_; _-_; _*_; _÷_; _^_; √_; 1/_; _^2;
+    -1/2; π; e; 2ℝ;
+    ⟨0,∞⟩; [0,∞⟩; [0,1];
+    >0→≢0; >0→≥0; >0*>0→>0; ≢0*≢0→≢0; 2>0; π>0; e^x>0; q>0→√q>0)
 
 --postulate
 --  Vec : Set → ℕ → Set
@@ -25,18 +33,40 @@ record NormalDist : Set where
   field
     μ : ℝ
     σ : ℝ
-    --σ>0 : {}
-    -- TODO: Add proof that σ > 0
-    --       Should use: https://agda.readthedocs.io/en/v2.6.1/language/irrelevance.html
+    .σ>0 : σ ∈ ⟨0,∞⟩
 
   dist : Dist ℝ
   dist = record
     {
-      pdf = λ x → 1/ (σ * √(2ℝ * π)) * e ^ (-1/2 * ((x - μ) ÷ σ) ^ 2ℝ)
+      pdf = pdf
     ; cdf = ?
     ; pdf→[0,∞⟩ = ?
+    --; pdf→[0,∞⟩ = λ x → >0→≥0 (>0*>0→>0 (σ>0→1/⟨σ√2π⟩>0 {σ>0}) (e^x>0 ?))
     ; cdf→[0,1] = ?
     }
+    where
+      -- proofs
+      2π>0 = >0*>0→>0 2>0 π>0
+      2π≥0 = >0→≥0 2π>0
+
+      -- computations
+      2π = (2ℝ * π)
+      √2π = (√ 2π) {2π≥0}
+
+      -- proofs
+      σ>0→σ√2π>0 : (σ>0 : σ ∈ ⟨0,∞⟩) → (σ * √2π) ∈ ⟨0,∞⟩
+      σ>0→σ√2π>0 σ>0 = >0*>0→>0 σ>0 (q>0→√q>0 2π 2π>0)
+
+      --σ>0→1/⟨σ√2π⟩>0 : .{σ>0 : σ ∈ ⟨0,∞⟩} → 1/ (σ * √2π) ∈ ⟨0,∞⟩
+      --σ>0→1/⟨σ√2π⟩>0 {σ>0} = ? -- p>0→1/p>0 σ>0→σ√2π>0 -- TODO: implement p>0→1/p>0
+
+      -- computation
+      1/⟨σ√2π⟩ = (1/ (σ * √2π)) {>0→≢0 (σ>0→σ√2π>0 σ>0)}
+
+      pdf : ℝ → ℝ
+      pdf x = 1/⟨σ√2π⟩ * e ^ (-1/2 * (⟨x-μ⟩÷σ ^2))
+        where
+          ⟨x-μ⟩÷σ = ((x - μ) ÷ σ) {>0→≢0 σ>0}
 
 --MultiNormal : ∀ {n : ℕ} → Vec ℝ n → Mat ℝ n n → Dist (Vec ℝ n)
 --MultiNormal {n} means cov = record

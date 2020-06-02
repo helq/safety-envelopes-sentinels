@@ -25,8 +25,8 @@ sample-cf : List NormalDist → ℝ → ℝ → List ℝ → ℝ × Bool
 sample-cf nds mμ mσ xs = ⟨ mean , any inside nds ⟩
   where
     n = fromℕ (length xs)
-    mean = sum xs ÷ n
-    var = sum (map (λ{x →(x - mean)^2}) xs) ÷ n
+    mean = (sum xs ÷ n) {?}
+    var = (sum (map (λ{x →(x - mean)^2}) xs) ÷ n) {?}
 
     inside : NormalDist → Bool
     inside nd = ((μ - mμ * σ) < mean) ∧ (mean < (μ + mμ * σ))
@@ -34,7 +34,7 @@ sample-cf nds mμ mσ xs = ⟨ mean , any inside nds ⟩
       where open NormalDist nd using (μ; σ)
             σ^2 = σ ^2
             --Var[σ^2] = 2 * (σ^2)^2 / n
-            std[σ^2] = (√ 2ℝ) * σ^2 ÷ (√ n)
+            std[σ^2] = (√ 2ℝ) {?} * (σ^2 ÷ ((√ n) {?})) {?}
 
 nonneg-cf : ℝ → ℝ × Bool
 nonneg-cf x = ⟨ x , 0ℝ ≤ x ⟩
@@ -42,7 +42,7 @@ nonneg-cf x = ⟨ x , 0ℝ ≤ x ⟩
 fromFloatsMeanCF : List (Float × Float) → Float → Float → Float × Bool
 fromFloatsMeanCF means×stds m x =
     let
-      ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std)}) means×stds
+      ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std) ?}) means×stds
       res = mean-cf ndists (ff m) (ff x)
     in
       ⟨ tf (proj₁ res) , proj₂ res ⟩
@@ -51,7 +51,7 @@ fromFloatsMeanCF means×stds m x =
 fromFloatsSampleCF : List (Float × Float) → Float → Float → List Float → Float × Bool
 fromFloatsSampleCF means×stds mμ mσ xs =
     let
-      ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std)}) means×stds
+      ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std) ?}) means×stds
       res = sample-cf ndists (ff mμ) (ff mσ) (map ff xs)
     in
       ⟨ tf (proj₁ res) , proj₂ res ⟩
@@ -78,7 +78,7 @@ classify pbs confindence x = helper P[stall|X= x ]
     -- The result of P should be in [0,1]. This should be possible to check
     -- with a more complete probability library
     P[stall|X=_] : ℝ → ℝ
-    P[stall|X= x ] = sum (map up pbs) ÷ sum (map below pbs)
+    P[stall|X= x ] = (sum (map up pbs) ÷ sum (map below pbs)) {?}
 
     helper : ℝ → StallClasses
     helper p with confindence < p | p < (1ℝ - confindence)
