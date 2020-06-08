@@ -1,15 +1,18 @@
 module Avionics.Real where
 
 open import Data.Bool using (Bool)
-open import Data.Nat using (ℕ)
 open import Data.Float using (Float)
+open import Data.Maybe using (Maybe; just; nothing)
+open import Data.Nat using (ℕ)
 open import Level using (0ℓ; _⊔_) renaming (suc to lsuc)
-open import Relation.Unary using (Pred; _∈_)
-open import Relation.Nullary.Decidable using (False)
 open import Relation.Binary using (Decidable)
+open import Relation.Binary.Definitions using (Transitive; Trans)
 open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Nullary using (Dec; yes; no)
+open import Relation.Nullary.Decidable using (False; ⌊_⌋)
+open import Relation.Unary using (Pred; _∈_)
 
-infix  4 _<_
+infix  4 _<_ _≤_ _<ᵇ_ _≤ᵇ_
 infixl 6 _+_ _-_
 infixl 7 _*_
 
@@ -22,12 +25,21 @@ postulate
   toFloat : ℝ → Float
   fromℕ : ℕ → ℝ
 
-  _<_ _≤_ : ℝ → ℝ → Bool
   _+_ _-_ _*_ _^_ : ℝ → ℝ → ℝ
   _^2 : ℝ → ℝ
   e π 0ℝ 1ℝ -1/2 2ℝ : ℝ
 
+  -- This was inspired on how the standard library handles things.
+  -- See: https://plfa.github.io/Decidable/
+  _<_ _≤_ : ℝ → ℝ → Set
+
   _≟_ : Decidable {A = ℝ} _≡_
+  _≤?_ : (m n : ℝ) → Dec (m ≤ n)
+  _<?_ : (m n : ℝ) → Dec (m < n)
+
+_<ᵇ_ _≤ᵇ_ : ℝ → ℝ → Bool
+p <ᵇ q = ⌊ p <? q ⌋
+p ≤ᵇ q = ⌊ p ≤? q ⌋
 
 _≢0 : ℝ → Set
 p ≢0 = False (p ≟ 0ℝ)
@@ -55,7 +67,26 @@ postulate
 
   e^x>0 : (x : ℝ) → (e ^ x) ∈ ⟨0,∞⟩
   √q≥0 : (q : ℝ) → (0≤q : q ∈ [0,∞⟩) → (√ q) {0≤q} ∈ [0,∞⟩
-  q>0→√q>0 : (q : ℝ) → (0<q : q ∈ ⟨0,∞⟩) → (√ q) {>0→≥0 0<q} ∈ ⟨0,∞⟩
+  q>0→√q>0 : {q : ℝ} → (0<q : q ∈ ⟨0,∞⟩) → (√ q) {>0→≥0 0<q} ∈ ⟨0,∞⟩
+
+  0≤→[0,∞⟩ : {n : ℝ} → 0ℝ ≤ n → n ∈ [0,∞⟩
+  0<→⟨0,∞⟩ : {n : ℝ} → 0ℝ < n → n ∈ ⟨0,∞⟩
+  [0,∞⟩→0≤ : {n : ℝ} → n ∈ [0,∞⟩ → 0ℝ ≤ n
+  ⟨0,∞⟩→0< : {n : ℝ} → n ∈ ⟨0,∞⟩ → 0ℝ < n
+
+  m≤n→m-p≤n-p : {m n p : ℝ} → m ≤ n → m - p ≤ n - p
+  m<n→m-p<n-p : {m n p : ℝ} → m < n → m - p < n - p
+
+  -- trans-≤ reduces to: {i j k : ℝ} → i ≤ j → j ≤ k → i ≤ k
+  trans-≤ : Transitive _≤_
+  <-transˡ : Trans _<_ _≤_ _<_
+
+
+postulate
+  n : ℝ
+  2≤n : 2ℝ ≤ n
+
+n≠0 = <-transˡ (⟨0,∞⟩→0< 2>0) 2≤n
 
 -- One of the weakest points in the whole library architecture!!!
 -- This is wrong, really wrong, but useful
@@ -64,8 +95,8 @@ postulate
 {-# COMPILE GHC toFloat = \x -> x #-}
 {-# COMPILE GHC fromℕ = fromIntegral #-}
 
-{-# COMPILE GHC _<_ = (<) #-}
-{-# COMPILE GHC _≤_ = (<=) #-}
+{-# COMPILE GHC _<ᵇ_ = (<) #-}
+{-# COMPILE GHC _≤ᵇ_ = (<=) #-}
 
 {-# COMPILE GHC _+_ = (+) #-}
 {-# COMPILE GHC _-_ = (-) #-}

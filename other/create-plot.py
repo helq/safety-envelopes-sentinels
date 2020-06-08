@@ -82,5 +82,6 @@ if __name__ == '__main__':
     mean_cf = np.array(readtxt('./mean-consistency-check.txt'))
     sample_cf = np.array([(m, v, b) for (m, (v, b)) in readtxt('./sample-consistency-check.txt')])
 
+    # TODO: PLOT USING ONE STANDARD DEVIATION (m should be 4)
     fig_plot(signal, mean_cf, sample_cf, save_as='consistency-m_mu_4-m_sigma_4')
     # fig_plot(signal, mean_cf, sample_cf)
