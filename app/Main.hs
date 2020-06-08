@@ -20,7 +20,7 @@ main = do
   -- TODO: Replace P.stdinLn with P.withHandle
   -- TODO: Replace P.stdoutLn with custom function to output more than one value
   let multiplier = 4.0
-      mul_var = 2.0
+      mul_var = 4.0
       airspeed_i = 2
       sample_n = 10
   --    c = checkMean airspeed_i multiplier
@@ -31,7 +31,7 @@ main = do
 
   -- TODO: Change this to use pipes!
   lines <- readLines
-  let samples = takeWhile ((==10) . length) $ (take 10) <$> tails (map read lines)
+  let samples = takeWhile ((==sample_n) . length) $ (take sample_n) <$> tails (map read lines)
   forM samples $ \sample-> do
     --print $ sample
     print $ checkSample airspeed_i multiplier mul_var sample

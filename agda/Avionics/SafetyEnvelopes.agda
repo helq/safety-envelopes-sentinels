@@ -4,6 +4,7 @@ open import Data.Nat using (ℕ; zero; suc)
 open import Data.Bool using (Bool; true; false; _∧_)
 open import Data.Float using (Float)
 open import Data.List using (List; []; _∷_; any; map; foldl; length)
+open import Relation.Binary.PropositionalEquality using (_≡_)
 
 open import Avionics.Real using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<_; _≤_; 0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ)
                           renaming (fromFloat to ff; toFloat to tf)
@@ -21,12 +22,18 @@ mean-cf nds m x = ⟨ x , any inside nds ⟩
     inside nd = ((μ - m * σ) < x) ∧ (x < (μ + m * σ))
       where open NormalDist nd using (μ; σ)
 
-sample-cf : List NormalDist → ℝ → ℝ → List ℝ → ℝ × Bool
-sample-cf nds mμ mσ xs = ⟨ mean , any inside nds ⟩
+--mean-cf-theorem : ∀ (nds : List NormalDist) (x : ℝ)
+--                → mean-cf nds (ff 4.0) x ≡ ⟨ x , true ⟩
+--                -- TODO: it should say Exists d in nds, such that ...
+--                → ∃[ μ ] (∃[ σ ] ((μ , σ) ∈ nds) ∧ P[ x ∈consistency] > 99.93)
+--mean-cf-theorem = ?
+
+sample-cf : List NormalDist → ℝ → ℝ → List ℝ → ℝ × ℝ × Bool
+sample-cf nds mμ mσ xs = ⟨ mean , ⟨ var , any inside nds ⟩ ⟩
   where
     n = fromℕ (length xs)
     mean = sum xs ÷ n
-    var = sum (map (λ{x →(x - mean)^2}) xs) ÷ n
+    var = sum (map (λ{x →(x - mean)^2}) xs) ÷ n -- TODO: change this for (n-1)!
 
     inside : NormalDist → Bool
     inside nd = ((μ - mμ * σ) < mean) ∧ (mean < (μ + mμ * σ))
@@ -48,13 +55,16 @@ fromFloatsMeanCF means×stds m x =
       ⟨ tf (proj₁ res) , proj₂ res ⟩
 {-# COMPILE GHC fromFloatsMeanCF as meanCF #-}
 
-fromFloatsSampleCF : List (Float × Float) → Float → Float → List Float → Float × Bool
+fromFloatsSampleCF : List (Float × Float) → Float → Float → List Float → Float × Float × Bool
 fromFloatsSampleCF means×stds mμ mσ xs =
     let
       ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std)}) means×stds
       res = sample-cf ndists (ff mμ) (ff mσ) (map ff xs)
+      m' = proj₁ res
+      v' = proj₁ (proj₂ res)
+      b = proj₂ (proj₂ res)
     in
-      ⟨ tf (proj₁ res) , proj₂ res ⟩
+      ⟨ tf m' , ⟨ tf v' , b ⟩ ⟩
 {-# COMPILE GHC fromFloatsSampleCF as sampleCF #-}
 
 data StallClasses : Set where

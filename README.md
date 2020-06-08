@@ -18,5 +18,5 @@ stack build
 To run Haskell code:
 
 ~~~sh
-stack exec sentinels-exe
+stack exec -- sentinels-exe
 ~~~
