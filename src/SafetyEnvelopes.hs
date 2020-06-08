@@ -10,8 +10,8 @@ import MAlonzo.Code.Avionics.SafetyEnvelopes (meanCF, sampleCF)
 checkMean :: Int -> Double -> Double -> (Double, Bool)
 checkMean n mul x = fromMaybe (-1, False) $ check_mean_cf n mul x
 
-checkSample :: Int -> Double -> Double -> [Double] -> (Double, Bool)
-checkSample n m_mean m_var = fromMaybe (-1, False) . check_sample_cf n m_mean m_var
+checkSample :: Int -> Double -> Double -> [Double] -> (Double, (Double, Bool))
+checkSample n m_mean m_var = fromMaybe (-1, (-1, False)) . check_sample_cf n m_mean m_var
 
 check_all :: Double -> Double -> (Double, Bool)
 check_all mul = meanCF (zip (concat means) (concat stds)) mul
@@ -22,7 +22,7 @@ check_mean_cf n mul x = do
   stds_ <- stds `at` n
   return $ meanCF (zip means_ stds_) mul x
 
-check_sample_cf :: Int -> Double -> Double -> [Double] -> Maybe (Double, Bool)
+check_sample_cf :: Int -> Double -> Double -> [Double] -> Maybe (Double, (Double, Bool))
 check_sample_cf n mul_mean mul_var xs = do
   means_ <- means `at` n
   stds_ <- stds `at` n
