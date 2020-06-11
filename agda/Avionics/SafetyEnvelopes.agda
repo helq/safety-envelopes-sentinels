@@ -29,11 +29,11 @@ mean-cf nds m x = ⟨ x , any inside nds ⟩
 --mean-cf-theorem = ?
 
 sample-cf : List NormalDist → ℝ → ℝ → List ℝ → ℝ × ℝ × Bool
-sample-cf nds mμ mσ xs = ⟨ mean , ⟨ var , any inside nds ⟩ ⟩
+sample-cf nds mμ mσ xs = ⟨ mean , ⟨ var_est , any inside nds ⟩ ⟩
   where
     n = fromℕ (length xs)
     mean = sum xs ÷ n
-    var = sum (map (λ{x →(x - mean)^2}) xs) ÷ n -- TODO: change this for (n-1)!
+    var_est = sum (map (λ{x →(x - mean)^2}) xs) ÷ (n - 1ℝ)
 
     inside : NormalDist → Bool
     inside nd = ((μ - mμ * σ) < mean) ∧ (mean < (μ + mμ * σ))
@@ -42,6 +42,8 @@ sample-cf nds mμ mσ xs = ⟨ mean , ⟨ var , any inside nds ⟩ ⟩
             σ^2 = σ ^2
             --Var[σ^2] = 2 * (σ^2)^2 / n
             std[σ^2] = (√ 2ℝ) * σ^2 ÷ (√ n)
+
+            var = (sum (map (λ{x →(x - μ)^2}) xs) ÷ n)
 
 nonneg-cf : ℝ → ℝ × Bool
 nonneg-cf x = ⟨ x , 0ℝ ≤ x ⟩
