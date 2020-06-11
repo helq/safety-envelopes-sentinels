@@ -1,11 +1,14 @@
+{-# OPTIONS --allow-unsolved-metas #-}
+
 module Avionics.SafetyEnvelopes where
 
-open import Data.Bool using (Bool; true; false; _∧_)
+open import Data.Bool using (Bool; true; false; _∧_; _∨_)
 open import Data.Float using (Float)
 open import Data.List using (List; []; _∷_; any; map; foldl; length)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (ℕ; zero; suc)
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality
+    using (_≡_; refl; cong; subst; sym; trans)
 open import Relation.Unary using (_∈_)
 
 open import Avionics.Real
@@ -20,13 +23,13 @@ open import Avionics.Probability using (Dist; NormalDist; ND)
 sum : List ℝ → ℝ
 sum = foldl _+_ 0ℝ
 
+-- TODO: Consider replacing _<_ for _<?_. _<?_ could allow better/easier proofs
+inside : NormalDist → ℝ → ℝ → Bool
+inside nd m x = ((μ - m * σ) <ᵇ x) ∧ (x <ᵇ (μ + m * σ))
+  where open NormalDist nd using (μ; σ)
+
 mean-cf : List NormalDist → ℝ → ℝ → ℝ × Bool
-mean-cf nds m x = ⟨ x , any inside nds ⟩
-  where
-    -- TODO: Consider replacing _<_ for _<?_. _<?_ could allow better/easier proofs
-    inside : NormalDist → Bool
-    inside nd = ((μ - m * σ) <ᵇ x) ∧ (x <ᵇ (μ + m * σ))
-      where open NormalDist nd using (μ; σ)
+mean-cf nds m x = ⟨ x , any (λ nd → inside nd m x) nds ⟩
 
 --mean-cf-theorem : ∀ (nds : List NormalDist) (x : ℝ)
 --                → mean-cf nds (ff 4.0) x ≡ ⟨ x , true ⟩
@@ -37,7 +40,7 @@ mean-cf nds m x = ⟨ x , any inside nds ⟩
 sample-cf : List NormalDist → ℝ → ℝ → List ℝ → Maybe (ℝ × ℝ × Bool)
 sample-cf nds mμ mσ [] = nothing
 sample-cf nds mμ mσ (_ ∷ []) = nothing
-sample-cf nds mμ mσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any inside nds ⟩ ⟩
+sample-cf nds mμ mσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any inside' nds ⟩ ⟩
   where
     n = fromℕ (length xs)
     -- Estimated mean from the data
@@ -61,8 +64,8 @@ sample-cf nds mμ mσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any ins
     -- Estimated Variance from the data (using the estimated mean)
     var_est = (sum (map (λ{x →(x - mean)^2}) xs) ÷ (n - 1ℝ)) {n-1≢0}
 
-    inside : NormalDist → Bool
-    inside nd = ((μ - mμ * σ) <ᵇ mean) ∧ (mean <ᵇ (μ + mμ * σ))
+    inside' : NormalDist → Bool
+    inside' nd = ((μ - mμ * σ) <ᵇ mean) ∧ (mean <ᵇ (μ + mμ * σ))
               ∧ (σ^2 - mσ * std[σ^2] <ᵇ var) ∧ (var <ᵇ σ^2 + mσ * std[σ^2])
       where open NormalDist nd using (μ; σ)
             -- Proofs
