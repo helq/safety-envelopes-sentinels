@@ -37,9 +37,10 @@ postulate
   _≤?_ : (m n : ℝ) → Dec (m ≤ n)
   _<?_ : (m n : ℝ) → Dec (m < n)
 
-_<ᵇ_ _≤ᵇ_ : ℝ → ℝ → Bool
+_<ᵇ_ _≤ᵇ_ _≡ᵇ_ : ℝ → ℝ → Bool
 p <ᵇ q = ⌊ p <? q ⌋
 p ≤ᵇ q = ⌊ p ≤? q ⌋
+p ≡ᵇ q = ⌊ p ≟ q ⌋
 
 _≢0 : ℝ → Set
 p ≢0 = False (p ≟ 0ℝ)
@@ -81,13 +82,6 @@ postulate
   trans-≤ : Transitive _≤_
   <-transˡ : Trans _<_ _≤_ _<_
 
-
-postulate
-  n : ℝ
-  2≤n : 2ℝ ≤ n
-
-n≠0 = <-transˡ (⟨0,∞⟩→0< 2>0) 2≤n
-
 -- One of the weakest points in the whole library architecture!!!
 -- This is wrong, really wrong, but useful
 {-# COMPILE GHC ℝ = type Double #-}
@@ -97,6 +91,7 @@ n≠0 = <-transˡ (⟨0,∞⟩→0< 2>0) 2≤n
 
 {-# COMPILE GHC _<ᵇ_ = (<) #-}
 {-# COMPILE GHC _≤ᵇ_ = (<=) #-}
+{-# COMPILE GHC _≡ᵇ_ = (==) #-}
 
 {-# COMPILE GHC _+_ = (+) #-}
 {-# COMPILE GHC _-_ = (-) #-}
@@ -114,6 +109,7 @@ n≠0 = <-transˡ (⟨0,∞⟩→0< 2>0) 2≤n
 
 -- REAAALY CAREFUL WITH THIS!
 -- TODO: Add some runtime checking to this. Fail hard if divisor is zero
-{-# COMPILE GHC 1/_ = (1/) #-}
-{-# COMPILE GHC _÷_ = (/) #-}
-{-# COMPILE GHC √_ = sqrt #-}
+--{-# COMPILE GHC _≢0 = \_ -> undefined #-}
+{-# COMPILE GHC 1/_ = \x _ -> (1/x) #-}
+{-# COMPILE GHC _÷_ = \x y _ -> (x/y) #-}
+{-# COMPILE GHC √_  = \x _ -> sqrt x #-}

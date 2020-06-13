@@ -1,22 +1,20 @@
-{-# OPTIONS --allow-unsolved-metas #-}
-
 module Avionics.SafetyEnvelopes where
 
 open import Data.Bool using (Bool; true; false; _∧_; _∨_)
-open import Data.Float using (Float)
 open import Data.List using (List; []; _∷_; any; map; foldl; length)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (ℕ; zero; suc)
 open import Relation.Binary.PropositionalEquality
     using (_≡_; refl; cong; subst; sym; trans)
 open import Relation.Unary using (_∈_)
+open import Relation.Nullary using (yes; no)
+open import Relation.Nullary.Decidable using (fromWitnessFalse)
 
 open import Avionics.Real
-    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _≢0;
+    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _≢0; _≟_;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
            ⟨0,∞⟩; [0,∞⟩;
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0; q>0→√q>0)
-    renaming (fromFloat to ff; toFloat to tf)
 open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂)
 open import Avionics.Probability using (Dist; NormalDist; ND)
 
@@ -24,23 +22,17 @@ sum : List ℝ → ℝ
 sum = foldl _+_ 0ℝ
 
 -- TODO: Consider replacing _<_ for _<?_. _<?_ could allow better/easier proofs
-inside : NormalDist → ℝ → ℝ → Bool
-inside nd m x = ((μ - m * σ) <ᵇ x) ∧ (x <ᵇ (μ + m * σ))
+inside : ℝ → ℝ → NormalDist → Bool
+inside z x nd = ((μ - z * σ) <ᵇ x) ∧ (x <ᵇ (μ + z * σ))
   where open NormalDist nd using (μ; σ)
 
-mean-cf : List NormalDist → ℝ → ℝ → ℝ × Bool
-mean-cf nds m x = ⟨ x , any (λ nd → inside nd m x) nds ⟩
-
---mean-cf-theorem : ∀ (nds : List NormalDist) (x : ℝ)
---                → mean-cf nds (ff 4.0) x ≡ ⟨ x , true ⟩
---                -- TODO: it should say Exists d in nds, such that ...
---                → ∃[ μ ] (∃[ σ ] ((μ , σ) ∈ nds) ∧ P[ x ∈consistency] > 99.93)
---mean-cf-theorem = ?
+z-predictable : List NormalDist → ℝ → ℝ → ℝ × Bool
+z-predictable nds z x = ⟨ x , any (inside z x) nds ⟩
 
 sample-cf : List NormalDist → ℝ → ℝ → List ℝ → Maybe (ℝ × ℝ × Bool)
-sample-cf nds mμ mσ [] = nothing
-sample-cf nds mμ mσ (_ ∷ []) = nothing
-sample-cf nds mμ mσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any inside' nds ⟩ ⟩
+sample-cf nds zμ zσ [] = nothing
+sample-cf nds zμ zσ (_ ∷ []) = nothing
+sample-cf nds zμ zσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any inside' nds ⟩ ⟩
   where
     n = fromℕ (length xs)
     -- Estimated mean from the data
@@ -65,8 +57,8 @@ sample-cf nds mμ mσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any ins
     var_est = (sum (map (λ{x →(x - mean)^2}) xs) ÷ (n - 1ℝ)) {n-1≢0}
 
     inside' : NormalDist → Bool
-    inside' nd = ((μ - mμ * σ) <ᵇ mean) ∧ (mean <ᵇ (μ + mμ * σ))
-              ∧ (σ^2 - mσ * std[σ^2] <ᵇ var) ∧ (var <ᵇ σ^2 + mσ * std[σ^2])
+    inside' nd = ((μ - zμ * σ) <ᵇ mean) ∧ (mean <ᵇ (μ + zμ * σ))
+              ∧ (σ^2 - zσ * std[σ^2] <ᵇ var) ∧ (var <ᵇ σ^2 + zσ * std[σ^2])
       where open NormalDist nd using (μ; σ)
             -- Proofs
             2≥0 : 2ℝ ∈ [0,∞⟩
@@ -95,33 +87,6 @@ sample-cf nds mμ mσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any ins
 nonneg-cf : ℝ → ℝ × Bool
 nonneg-cf x = ⟨ x , 0ℝ ≤ᵇ x ⟩
 
-fromFloatsMeanCF : List (Float × Float) → Float → Float → Maybe (Float × Bool)
-fromFloatsMeanCF means×stds m x =
-    let
-      ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std) ?}) means×stds
-      res = mean-cf ndists (ff m) (ff x)
-    in
-      just ⟨ tf (proj₁ res) , proj₂ res ⟩
-{-# COMPILE GHC fromFloatsMeanCF as meanCF #-}
-
-fromFloatsSampleCF : List (Float × Float) → Float → Float → List Float → Maybe (Float × Float × Bool)
-fromFloatsSampleCF means×stds mμ mσ xs =
-    let
-      ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std) ?}) means×stds
-    in
-      return (sample-cf ndists (ff mμ) (ff mσ) (map ff xs))
-  where
-    return : Maybe (ℝ × ℝ × Bool) → Maybe (Float × Float × Bool)
-    return nothing = nothing
-    return (just res) =
-      let
-        m' = proj₁ res
-        v' = proj₁ (proj₂ res)
-        b = proj₂ (proj₂ res)
-      in
-        just ⟨ tf m' , ⟨ tf v' , b ⟩ ⟩
-{-# COMPILE GHC fromFloatsSampleCF as sampleCF #-}
-
 data StallClasses : Set where
   Uncertain Stall NoStall : StallClasses
 
@@ -143,7 +108,9 @@ classify pbs confindence x = helper P[stall|X= x ]
     -- The result of P should be in [0,1]. This should be possible to check
     -- with a more complete probability library
     P[stall|X=_] : ℝ → ℝ
-    P[stall|X= x ] = (sum (map up pbs) ÷ sum (map below pbs)) {?}
+    P[stall|X= x ] with sum (map below pbs) ≟ 0ℝ
+    ... | yes _  = 0ℝ
+    ... | no x≢0 = (sum (map up pbs) ÷ sum (map below pbs)) {fromWitnessFalse x≢0}
 
     helper : ℝ → StallClasses
     helper p with confindence <ᵇ p | p <ᵇ (1ℝ - confindence)
