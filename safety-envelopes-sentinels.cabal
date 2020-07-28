@@ -4,26 +4,25 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8230b017e3692c8db7955a7fe19c91b478eb49b0d61b45860addb9e6f635f239
+-- hash: 97821dd868aae65cd3e8213222d776e1a893be5746ce3aa32885dc4c0bb8a833
 
-name:           sentinels
+name:           safety-envelopes-sentinels
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/sentinels#readme>
-homepage:       https://github.com/githubuser/sentinels#readme
-bug-reports:    https://github.com/githubuser/sentinels/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
+description:    Please see the README on GitHub at <https://github.com/helq/safety-envelopes-sentinels#readme>
+homepage:       https://github.com/helq/safety-envelopes-sentinels#readme
+bug-reports:    https://github.com/helq/safety-envelopes-sentinels/issues
+author:         Elkin Cruz
+maintainer:     Elkin Cruz
+copyright:      2020 Elkin Cruz
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/sentinels
+  location: https://github.com/helq/safety-envelopes-sentinels
 
 library
   exposed-modules:
@@ -164,7 +163,7 @@ library
       MAlonzo.RTE
       SafetyEnvelopes
   other-modules:
-      Paths_sentinels
+      Paths_safety_envelopes_sentinels
   hs-source-dirs:
       src
   ghc-options: -fwarn-incomplete-patterns -fno-warn-overlapping-patterns
@@ -178,26 +177,26 @@ library
 executable sentinels-exe
   main-is: Main.hs
   other-modules:
-      Paths_sentinels
+      Paths_safety_envelopes_sentinels
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , pipes
-    , sentinels
+    , safety-envelopes-sentinels
   default-language: Haskell2010
 
 test-suite sentinels-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Paths_sentinels
+      Paths_safety_envelopes_sentinels
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , pipes
-    , sentinels
+    , safety-envelopes-sentinels
   default-language: Haskell2010

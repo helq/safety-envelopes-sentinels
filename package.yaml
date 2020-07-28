@@ -1,14 +1,12 @@
-name:                sentinels
+name:                safety-envelopes-sentinels
 version:             0.1.0.0
-github:              "githubuser/sentinels"
+github:              "helq/safety-envelopes-sentinels"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2020 Author name here"
+author:              "Elkin Cruz"
+copyright:           "2020 Elkin Cruz"
 
 extra-source-files:
 - README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -17,7 +15,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/sentinels#readme>
+description:         Please see the README on GitHub at <https://github.com/helq/safety-envelopes-sentinels#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -42,7 +40,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - sentinels
+    - safety-envelopes-sentinels
 
 tests:
   sentinels-test:
@@ -53,4 +51,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - sentinels
+    - safety-envelopes-sentinels
