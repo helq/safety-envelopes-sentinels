@@ -1,5 +1,6 @@
 module Avionics.Real where
 
+open import Algebra.Definitions using (LeftIdentity; RightIdentity)
 open import Data.Bool using (Bool)
 open import Data.Float using (Float)
 open import Data.Maybe using (Maybe; just; nothing)
@@ -7,7 +8,7 @@ open import Data.Nat using (ℕ)
 open import Level using (0ℓ; _⊔_) renaming (suc to lsuc)
 open import Relation.Binary using (Decidable)
 open import Relation.Binary.Definitions using (Transitive; Trans)
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Relation.Nullary using (Dec; yes; no)
 open import Relation.Nullary.Decidable using (False; ⌊_⌋)
 open import Relation.Unary using (Pred; _∈_)
@@ -81,6 +82,14 @@ postulate
   -- trans-≤ reduces to: {i j k : ℝ} → i ≤ j → j ≤ k → i ≤ k
   trans-≤ : Transitive _≤_
   <-transˡ : Trans _<_ _≤_ _<_
+
+  --+-identityˡ : LeftIdentity 0ℝ _+_
+  --+-identityʳ : RightIdentity 0ℝ _+_
+  +-identityˡ : ∀ x → 0ℝ + x ≡ x
+  +-identityʳ : ∀ x → x + 0ℝ ≡ x
+
+  --0ℝ ≟_
+  0≟0≡yes0≡0 : (0ℝ ≟ 0ℝ) ≡ yes refl
 
 -- One of the weakest points in the whole library architecture!!!
 -- This is wrong, really wrong, but useful

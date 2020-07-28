@@ -8,24 +8,25 @@ open import Data.Maybe using (Maybe; just; nothing)
 open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂)
 open import Avionics.Probability using (Dist; NormalDist; ND)
 open import Avionics.Real renaming (fromFloat to ff; toFloat to tf)
-open import Avionics.SafetyEnvelopes using (z-predictable; sample-cf)
+open import Avionics.SafetyEnvelopes using (z-predictable'; sample-z-predictable)
 
--- TODO: Change names
-fromFloatsMeanCF : List (Float × Float) → Float → Float → Maybe (Float × Bool)
-fromFloatsMeanCF means×stds z x =
+fromFloats-z-predictable : List (Float × Float) → Float → Float → Maybe (Float × Bool)
+fromFloats-z-predictable means×stds z x =
     let
       ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std) ?}) means×stds
-      res = z-predictable ndists (ff z) (ff x)
+      res = z-predictable' ndists (ff z) (ff x)
     in
       just ⟨ tf (proj₁ res) , proj₂ res ⟩
-{-# COMPILE GHC fromFloatsMeanCF as meanCF #-}
+{-# COMPILE GHC fromFloats-z-predictable as zPredictable #-}
 
-fromFloatsSampleCF : List (Float × Float) → Float → Float → List Float → Maybe (Float × Float × Bool)
-fromFloatsSampleCF means×stds zμ zσ xs =
+fromFloats-sample-z-predictable :
+    List (Float × Float)
+    → Float → Float → List Float → Maybe (Float × Float × Bool)
+fromFloats-sample-z-predictable means×stds zμ zσ xs =
     let
       ndists = map (λ{⟨ mean , std ⟩ → ND (ff mean) (ff std) ?}) means×stds
     in
-      return (sample-cf ndists (ff zμ) (ff zσ) (map ff xs))
+      return (sample-z-predictable ndists (ff zμ) (ff zσ) (map ff xs))
   where
     return : Maybe (ℝ × ℝ × Bool) → Maybe (Float × Float × Bool)
     return nothing = nothing
@@ -36,4 +37,4 @@ fromFloatsSampleCF means×stds zμ zσ xs =
         b = proj₂ (proj₂ res)
       in
         just ⟨ tf m' , ⟨ tf v' , b ⟩ ⟩
-{-# COMPILE GHC fromFloatsSampleCF as sampleCF #-}
+{-# COMPILE GHC fromFloats-sample-z-predictable as sampleZPredictable #-}

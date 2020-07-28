@@ -1,11 +1,14 @@
 module Avionics.SafetyEnvelopes.Properties where
 
-open import Data.Bool using (true)
+open import Data.Bool using (Bool; true; false)
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.List as List using (List; []; _∷_)
 open import Data.List.Relation.Unary.Any as Any using (Any; here; there; satisfied)
-open import Data.Product using (∃-syntax)
+open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
+open import Data.Product using (∃-syntax) renaming (_,_ to ⟨⟨_,_⟩⟩)
 open import Function using (_∘_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; inspect; [_]; sym; trans)
+open import Relation.Nullary using (Dec; yes; no)
 open import Relation.Nullary.Decidable using (toWitness)
 open import Relation.Unary using (_∈_)
 
@@ -15,12 +18,16 @@ open import Avionics.Real
     using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≢0;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
            ⟨0,∞⟩; [0,∞⟩;
-           <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0; q>0→√q>0)
+           <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0; q>0→√q>0;
+           0≟0≡yes0≡0)
 open import Avionics.Probability using (NormalDist; Dist)
 open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂; map)
 open import Avionics.SafetyEnvelopes
-    using (inside; z-predictable'; classify; StallClasses; safety-envelope;
-           z-predictable; Model; τ-confident)
+    using (inside; z-predictable'; P[_|X=_]_; classify''; classify; M→pbs;
+           StallClasses; Stall; NoStall;
+           safety-envelope; z-predictable; Model; τ-confident;
+           Stall≡1-NoStall
+           )
 
 open NormalDist using (σ; μ)
 
@@ -68,23 +75,79 @@ prop1' nds z x res≡x,true = satisfied (prop1 nds z x res≡x,true)
 extractDists : Model → List NormalDist
 extractDists M = List.map (proj₁ ∘ proj₂) (Model.fM M)
 
+-- ############ PROP 1 ############
 prop1M : ∀ (M z x)
        → z-predictable M z x ≡ ⟨ x , true ⟩
        → Any (λ nd → x ∈ pi nd z) (extractDists M)
-prop1M = ?
+prop1M M z x res≡x,true = prop1 (extractDists M) z x res≡x,true
+-- ############ PROP 1 END ############
 
+--postulate
+--  P'[_❘X=_]_ : StallClasses → ℝ → Model → ℝ
 
-P[_❘_]_ : StallClasses → ℝ → Model → ℝ
-P[_❘_]_ = ?
+lem← : ∀ (pbs τ x k)
+     → classify'' pbs τ x ≡ just k
+     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
+lem← pbs τ x k _ with P[ Stall |X= x ] pbs | inspect (P[ Stall |X=_] pbs) x
+lem← _ τ _ _       _ | just p | [ _ ] with τ <? p | τ <? (1ℝ - p)
+lem← _ _ _ Stall   _ | just p | [ P[k|X=x]≡justp ] | yes τ<p | no ¬τ<1-p = ⟨⟨ p , ⟨ P[k|X=x]≡justp , τ<p ⟩ ⟩⟩
+lem← _ _ _ NoStall _ | just p | [ P[k|X=x]≡justp ] | no ¬τ<p | yes τ<1-p =
+  let P[NoStall|X=x]≡just1-p = Stall≡1-NoStall P[k|X=x]≡justp
+  in ⟨⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ<1-p ⟩ ⟩⟩
 
-prop2 : ∀ (M τ x k)
-      → classify M τ x ≡ k
-      → τ < (P[ k ❘ x ] M)
-      --→ τ < (P[ k ❘ x ] M) × τ-confident M τ x ≡ true
-prop2 = ?
+lem→ : ∀ (pbs τ x k)
+     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
+     → classify'' pbs τ x ≡ just k
+lem→ M τ x k ⟨⟨ p , ⟨ P[k|X=x]M , τ<p ⟩ ⟩⟩ = ?
+--lem→ pbs _ x Stall _ with P[ Stall |X= x ] pbs
+--lem→ _ τ _ _ _ | just p with τ <? p | τ <? (1ℝ - p)
+--lem→ _ _ _ _ _ | just p | yes _ | no  _ = ?
+--lem→ _ _ _ _ _ | just p | no  _ | yes _ = ?
+--lem→ _ _ _ _ _ | just p | _     | _ = ?
+--lem→ _ _ _ _ _ | nothing = ?
 
-prop3 : ∀ (M z τ x)
-      → safety-envelope M z τ x ≡ true
-      → (Any (λ nd → x ∈ pi nd z) (extractDists M))
-        × ∃[ k ] (classify M τ x ≡ k × τ < P[ k ❘ x ] M)
-prop3 = ?
+prop2M-prior→ : ∀ (M τ x k)
+              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+              → classify M τ x ≡ just k
+prop2M-prior→ M = lem→ (M→pbs M)
+
+prop2M-prior← : ∀ (M τ x k)
+              → classify M τ x ≡ just k
+              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+prop2M-prior← M = lem← (M→pbs M)
+
+prop2M→ : ∀ (M τ x k)
+        → classify M τ x ≡ just k
+        → τ-confident M τ x ≡ true
+prop2M→ M τ x k cMτx≡k = cong is-just cMτx≡k
+
+-- Not extrictly true, it requires an existential quantification
+prop2M← : ∀ (M τ x k)
+       → τ-confident M τ x ≡ true
+       → classify M τ x ≡ just k
+prop2M← M τ x k τconf≡true = ?
+
+-- ############ PROP 2 ############
+prop2M'→ : ∀ (M τ x k)
+         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+         → τ-confident M τ x ≡ true
+prop2M'→ M τ x k ⟨⟨p,⟩⟩ = prop2M→ M τ x k (prop2M-prior→ M τ x k ⟨⟨p,⟩⟩)
+
+prop2M'← : ∀ (M τ x k)
+         → τ-confident M τ x ≡ true
+         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+prop2M'← M τ x k τconf≡true = prop2M-prior← M τ x k (prop2M← M τ x k τconf≡true)
+-- ############ PROP 2 END ############
+
+---- ############ PROP 3 ############
+prop3M← : ∀ (M z τ x)
+        → safety-envelope M z τ x ≡ true
+        → (Any (λ nd → x ∈ pi nd z) (extractDists M))
+          × ∃[ k ] (classify M τ x ≡ just k  ×  ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p)))
+prop3M← M z τ x seM≡true = ⟨ prop1M M z x ? , ⟨⟨ ? , ⟨ ? , prop2M'→ M τ x ? ? ⟩ ⟩⟩ ⟩
+
+--prop3M'← : ∀ (M z τ x)
+--        → safety-envelope M z τ x ≡ true
+--        → z-predictable M z x ≡ ⟨ x , true ⟩  ×  τ-confident M τ x ≡ true
+--prop3M'← = ?
+---- ############ PROP 3 END ############

@@ -4,7 +4,7 @@ open import Data.Bool using (Bool; true; false; _∧_; _∨_)
 open import Data.List using (List; []; _∷_; any; map; foldl; length)
 open import Data.List.Relation.Unary.Any as Any using (Any)
 open import Data.List.Relation.Unary.All as All using (All)
-open import Data.Maybe using (Maybe; just; nothing)
+open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
 open import Data.Nat using (ℕ; zero; suc)
 open import Function using (_∘_)
 open import Relation.Binary.PropositionalEquality
@@ -14,7 +14,7 @@ open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (fromWitnessFalse)
 
 open import Avionics.Real
-    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _≢0; _≟_;
+    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≢0; _≟_;
            1/_;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
            ⟨0,∞⟩; [0,∞⟩;
@@ -38,7 +38,8 @@ record Model : Set where
     -- Every pair of angle of attack and airspeed must be represented in the map fM
     .fMisMap₁ : All (λ ⟨α,v⟩ → Any (λ ⟨α,v⟩,ND → proj₁ ⟨α,v⟩,ND ≡ ⟨α,v⟩) fM ) SM
     .fMisMap₂ : All (λ ⟨α,v⟩,ND → Any (λ ⟨α,v⟩ → proj₁ ⟨α,v⟩,ND ≡ ⟨α,v⟩) SM ) fM
-    .len>0 : length SM ≢ 0
+    .lenSM>0 : length SM ≢ 0
+    --.lenfM>0 : length fM ≢ 0 -- this is the result of the bijection above and .lenSM>0
 
 z-predictable' : List NormalDist → ℝ → ℝ → ℝ × Bool
 z-predictable' nds z x = ⟨ x , any (inside z x) nds ⟩
@@ -107,45 +108,49 @@ nonneg-cf : ℝ → ℝ × Bool
 nonneg-cf x = ⟨ x , 0ℝ ≤ᵇ x ⟩
 
 data StallClasses : Set where
-  Uncertain Stall NoStall : StallClasses
+  Stall NoStall : StallClasses
 
---eqStall : StallClasses → StallClasses → Bool
---eqStall Stall     Stall = true
---eqStall NoStall   NoStall = true
---eqStall Uncertain Uncertain = true
 
--- TODO: `List (ℝ × ℝ × Dist ℝ)` should be replaced by something that ensures that
---       all ℝ (first) values are between 0 and 1, and their sum is 1
--- First ℝ is P[c], second is P[stall|c]
--- TODO: τ should be restricted to a number in the interval [0.5, 1)
--- TODO: Change `List (ℝ × ℝ × Dist ℝ)` for `Model`
-classify' : List (ℝ × ℝ × Dist ℝ) → ℝ → ℝ → StallClasses
-classify' pbs τ x = helper P[stall|X= x ]
+P[stall]f⟨_|stall⟩_ : ℝ → List (ℝ × ℝ × Dist ℝ) → ℝ
+P[stall]f⟨ x |stall⟩ pbs = sum (map unpack pbs)
   where
-    up : ℝ × ℝ × Dist ℝ → ℝ
-    up ⟨ P[c] , ⟨ P[stall|c] , dist ⟩ ⟩ = pdf x + P[c] + P[stall|c]
+    unpack : ℝ × ℝ × Dist ℝ → ℝ
+    unpack ⟨ P[⟨α,v⟩] , ⟨ P[stall|⟨α,v⟩] , dist ⟩ ⟩ = pdf x * P[⟨α,v⟩] * P[stall|⟨α,v⟩]
       where open Dist dist using (pdf)
 
-    below : ℝ × ℝ × Dist ℝ → ℝ
-    below ⟨ P[c] , ⟨ P[stall|c] , dist ⟩ ⟩ = pdf x + P[c]
+f⟨_⟩_ : ℝ → List (ℝ × ℝ × Dist ℝ) → ℝ
+f⟨ x ⟩ pbs = sum (map unpack pbs)
+  where
+    unpack : ℝ × ℝ × Dist ℝ → ℝ
+    unpack ⟨ P[⟨α,v⟩] , ⟨ _ , dist ⟩ ⟩ = pdf x * P[⟨α,v⟩]
       where open Dist dist using (pdf)
 
-    -- The result of P should be in [0,1]. This should be possible to check
-    -- with a more complete probability library
-    P[stall|X=_] : ℝ → ℝ
-    P[stall|X= x ] with sum (map below pbs) ≟ 0ℝ
-    ... | yes _  = 0ℝ
-    ... | no x≢0 = (sum (map up pbs) ÷ sum (map below pbs)) {fromWitnessFalse x≢0}
+-- There should be a proof showing that the resulting value will always be in the interval [0,1]
+P[_|X=_]_ : StallClasses → ℝ → List (ℝ × ℝ × Dist ℝ) → Maybe ℝ
+P[ klass |X= x ] pbs with f⟨ x ⟩ pbs ≟ 0ℝ
+... | yes _ = nothing
+... | no f⟨x⟩≢0 with klass
+...       | Stall   = just (((P[stall]f⟨ x |stall⟩ pbs) ÷ (f⟨ x ⟩ pbs)) {fromWitnessFalse f⟨x⟩≢0})
+...       | NoStall = just (1ℝ - ((P[stall]f⟨ x |stall⟩ pbs) ÷ (f⟨ x ⟩ pbs)) {fromWitnessFalse f⟨x⟩≢0})
 
-    helper : ℝ → StallClasses
-    helper p with τ <ᵇ p | p <ᵇ (1ℝ - τ)
-    ...         | true   | _        = Stall
-    ...         | _      | true     = NoStall
-    ...         | false  | false    = Uncertain
-    --...         | true             | true     = ? -- This is never possible! This can be a theorem
+postulate
+  -- TODO: Find out how to prove this!
+  -- It probably requires to prove that P[Stall|X=x] + P[NoStall|X=x] ≡ 1
+  Stall≡1-NoStall : ∀ {x pbs p}
+                  → P[ Stall |X= x ] pbs ≡ just p
+                  → P[ NoStall |X= x ] pbs ≡ just (1ℝ - p)
 
-classify : Model → ℝ → ℝ → StallClasses
-classify M = classify' (map convert (Model.fM M))
+
+classify'' : List (ℝ × ℝ × Dist ℝ) → ℝ → ℝ → Maybe StallClasses
+classify'' pbs τ x with P[ Stall |X= x ] pbs
+...   | nothing = nothing
+...   | just p with τ <? p | τ <? (1ℝ - p)
+...            | yes _ | no  _ = just Stall
+...            | no _  | yes _ = just NoStall
+...            | _  | _ = nothing -- the only missing case is `no _ | no _`, `yes _ | yes _` is not possible
+
+M→pbs : Model → List (ℝ × ℝ × Dist ℝ)
+M→pbs M = map convert (Model.fM M)
   where 
     n = fromℕ (length (Model.fM M))
     postulate
@@ -157,12 +162,11 @@ classify M = classify' (map convert (Model.fM M))
     convert ⟨ _ , ⟨ nd , P[stall|c] ⟩ ⟩ = ⟨ 1/n , ⟨ P[stall|c] , dist ⟩ ⟩
       where open NormalDist nd using (dist)
 
-not-uncertain : StallClasses → Bool
-not-uncertain Uncertain = false
-not-uncertain _ = true
+classify : Model → ℝ → ℝ → Maybe StallClasses
+classify M = classify'' (M→pbs M)
 
 τ-confident : Model → ℝ → ℝ → Bool
-τ-confident M τ = not-uncertain ∘ classify M τ
+τ-confident M τ = is-just ∘ classify M τ
 
 safety-envelope : Model → ℝ → ℝ → ℝ → Bool
 safety-envelope M z τ x = proj₂ (z-predictable M z x)
