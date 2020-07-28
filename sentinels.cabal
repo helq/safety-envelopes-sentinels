@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a124d5077fb1671377428b7ed4fcd0a1c285122b76a91c10d935c766d0d295a2
+-- hash: 8230b017e3692c8db7955a7fe19c91b478eb49b0d61b45860addb9e6f635f239
 
 name:           sentinels
 version:        0.1.0.0
@@ -57,9 +57,9 @@ library
       MAlonzo.Code.Algebra.Properties.Semilattice
       MAlonzo.Code.Algebra.Structures
       MAlonzo.Code.Avionics.Probability
-      MAlonzo.Code.Avionics.Product
       MAlonzo.Code.Avionics.Real
       MAlonzo.Code.Avionics.SafetyEnvelopes
+      MAlonzo.Code.Avionics.SafetyEnvelopes.ExtInterface
       MAlonzo.Code.Axiom.Extensionality.Propositional
       MAlonzo.Code.Axiom.UniquenessOfIdentityProofs
       MAlonzo.Code.Category.Applicative
@@ -88,7 +88,10 @@ library
       MAlonzo.Code.Data.List.Relation.Binary.Pointwise
       MAlonzo.Code.Data.List.Relation.Unary.All
       MAlonzo.Code.Data.List.Relation.Unary.Any
+      MAlonzo.Code.Data.Maybe
       MAlonzo.Code.Data.Maybe.Base
+      MAlonzo.Code.Data.Maybe.Relation.Unary.All
+      MAlonzo.Code.Data.Maybe.Relation.Unary.Any
       MAlonzo.Code.Data.Nat
       MAlonzo.Code.Data.Nat.Base
       MAlonzo.Code.Data.Nat.Properties
@@ -104,6 +107,8 @@ library
       MAlonzo.Code.Data.Vec
       MAlonzo.Code.Data.Vec.Base
       MAlonzo.Code.Data.Vec.Bounded.Base
+      MAlonzo.Code.ExtInterface.Data.Maybe
+      MAlonzo.Code.ExtInterface.Data.Product
       MAlonzo.Code.Function
       MAlonzo.Code.Function.Base
       MAlonzo.Code.Function.Bijection

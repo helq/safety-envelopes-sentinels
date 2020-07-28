@@ -7,7 +7,7 @@ import Control.Monad (forM)
 import System.IO.Error (catchIOError)
 import System.Environment (getArgs)
 
-import SafetyEnvelopes (checkMean, checkSample)
+import SafetyEnvelopes (checkZPredictable, checkSampleZPredictable)
 
 -- TODO: Change read parser for something that handles errors well
 --   In fact, the usage of String is a bad practice. Use ByteString and read
@@ -17,20 +17,20 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    ["mean"] -> main_mean
+    ["single"] -> main_single
     ["sample"] -> main_sample
     _ -> putStrLn "You need to supply a parameter to check data. Either `mean` or `sample`"
 
 
-main_mean :: IO ()
-main_mean = do
+main_single :: IO ()
+main_single = do
   -- TODO: From input arguments get files to input and output
   -- TODO: Open files to read and write
   -- TODO: Replace P.stdinLn with P.withHandle
   -- TODO: Replace P.stdoutLn with custom function to output more than one value
   let multiplier = 4.0
       airspeed_i = 2
-      c = checkMean airspeed_i multiplier
+      c = checkZPredictable airspeed_i multiplier
 
   runEffect $ P.stdinLn
             >-> P.map (\x-> show . c $ read x)
@@ -49,7 +49,7 @@ main_sample = do
   let samples = takeWhile ((==sample_n) . length) $ (take sample_n) <$> tails (map read lines)
   forM samples $ \sample-> do
     --print $ sample
-    print $ checkSample airspeed_i multiplier mul_var sample
+    print $ checkSampleZPredictable airspeed_i multiplier mul_var sample
   return ()
 
 -- TODO: This is not lazy. This should go away once pipes are used

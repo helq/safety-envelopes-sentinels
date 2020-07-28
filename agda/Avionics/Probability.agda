@@ -5,7 +5,10 @@ module Avionics.Probability where
 open import Data.Nat using (ℕ; zero; suc)
 open import Relation.Unary using (_∈_)
 
-open import Avionics.Real using (ℝ; _+_; _-_; _*_; _÷_; _^_; √_; 1/_; -1/2; π; e; 2ℝ; [0,∞⟩; [0,1])
+open import Avionics.Real using (
+    ℝ; _+_; _-_; _*_; _÷_; _^_; √_; 1/_; _^2;
+    -1/2; π; e; 2ℝ;
+    ⟨0,∞⟩; [0,∞⟩; [0,1])
 
 --postulate
 --  Vec : Set → ℕ → Set
@@ -25,18 +28,23 @@ record NormalDist : Set where
   field
     μ : ℝ
     σ : ℝ
-    --σ>0 : {}
-    -- TODO: Add proof that σ > 0
-    --       Should use: https://agda.readthedocs.io/en/v2.6.1/language/irrelevance.html
 
   dist : Dist ℝ
   dist = record
     {
-      pdf = λ x → 1/ (σ * √(2ℝ * π)) * e ^ (-1/2 * ((x - μ) ÷ σ) ^ 2ℝ)
+      pdf = pdf
     ; cdf = ?
     ; pdf→[0,∞⟩ = ?
     ; cdf→[0,1] = ?
     }
+    where
+      √2π = (√ (2ℝ * π))
+      1/⟨σ√2π⟩ = (1/ (σ * √2π))
+
+      pdf : ℝ → ℝ
+      pdf x = 1/⟨σ√2π⟩ * e ^ (-1/2 * (⟨x-μ⟩÷σ ^2))
+        where
+          ⟨x-μ⟩÷σ = ((x - μ) ÷ σ)
 
 --MultiNormal : ∀ {n : ℕ} → Vec ℝ n → Mat ℝ n n → Dist (Vec ℝ n)
 --MultiNormal {n} means cov = record
