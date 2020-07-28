@@ -5,7 +5,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.List as List using (List; []; _∷_)
 open import Data.List.Relation.Unary.Any as Any using (Any; here; there; satisfied)
 open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
-open import Data.Product using (∃-syntax) renaming (_,_ to ⟨⟨_,_⟩⟩)
+open import Data.Product using (∃-syntax; _×_; proj₁; proj₂; map) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; inspect; [_]; sym; trans)
 open import Relation.Nullary using (Dec; yes; no)
@@ -21,7 +21,6 @@ open import Avionics.Real
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0; q>0→√q>0;
            0≟0≡yes0≡0)
 open import Avionics.Probability using (NormalDist; Dist)
-open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂; map)
 open import Avionics.SafetyEnvelopes
     using (inside; z-predictable'; P[_|X=_]_; classify''; classify; M→pbs;
            StallClasses; Stall; NoStall;
@@ -90,15 +89,15 @@ lem← : ∀ (pbs τ x k)
      → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
 lem← pbs τ x k _ with P[ Stall |X= x ] pbs | inspect (P[ Stall |X=_] pbs) x
 lem← _ τ _ _       _ | just p | [ _ ] with τ <? p | τ <? (1ℝ - p)
-lem← _ _ _ Stall   _ | just p | [ P[k|X=x]≡justp ] | yes τ<p | no ¬τ<1-p = ⟨⟨ p , ⟨ P[k|X=x]≡justp , τ<p ⟩ ⟩⟩
+lem← _ _ _ Stall   _ | just p | [ P[k|X=x]≡justp ] | yes τ<p | no ¬τ<1-p = ⟨ p , ⟨ P[k|X=x]≡justp , τ<p ⟩ ⟩
 lem← _ _ _ NoStall _ | just p | [ P[k|X=x]≡justp ] | no ¬τ<p | yes τ<1-p =
   let P[NoStall|X=x]≡just1-p = Stall≡1-NoStall P[k|X=x]≡justp
-  in ⟨⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ<1-p ⟩ ⟩⟩
+  in ⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ<1-p ⟩ ⟩
 
 lem→ : ∀ (pbs τ x k)
      → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
      → classify'' pbs τ x ≡ just k
-lem→ M τ x k ⟨⟨ p , ⟨ P[k|X=x]M , τ<p ⟩ ⟩⟩ = ?
+lem→ M τ x k ⟨ p , ⟨ P[k|X=x]M , τ<p ⟩ ⟩ = ?
 --lem→ pbs _ x Stall _ with P[ Stall |X= x ] pbs
 --lem→ _ τ _ _ _ | just p with τ <? p | τ <? (1ℝ - p)
 --lem→ _ _ _ _ _ | just p | yes _ | no  _ = ?
@@ -131,7 +130,7 @@ prop2M← M τ x k τconf≡true = ?
 prop2M'→ : ∀ (M τ x k)
          → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
          → τ-confident M τ x ≡ true
-prop2M'→ M τ x k ⟨⟨p,⟩⟩ = prop2M→ M τ x k (prop2M-prior→ M τ x k ⟨⟨p,⟩⟩)
+prop2M'→ M τ x k ⟨p,⟩ = prop2M→ M τ x k (prop2M-prior→ M τ x k ⟨p,⟩)
 
 prop2M'← : ∀ (M τ x k)
          → τ-confident M τ x ≡ true
@@ -144,7 +143,7 @@ prop3M← : ∀ (M z τ x)
         → safety-envelope M z τ x ≡ true
         → (Any (λ nd → x ∈ pi nd z) (extractDists M))
           × ∃[ k ] (classify M τ x ≡ just k  ×  ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p)))
-prop3M← M z τ x seM≡true = ⟨ prop1M M z x ? , ⟨⟨ ? , ⟨ ? , prop2M'→ M τ x ? ? ⟩ ⟩⟩ ⟩
+prop3M← M z τ x seM≡true = ? -- ⟨ prop1M M z x ? , ⟨ ? , ⟨ ? , prop2M'→ M τ x ? ? ⟩ ⟩ ⟩
 
 --prop3M'← : ∀ (M z τ x)
 --        → safety-envelope M z τ x ≡ true

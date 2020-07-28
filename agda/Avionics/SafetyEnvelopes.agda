@@ -6,6 +6,7 @@ open import Data.List.Relation.Unary.Any as Any using (Any)
 open import Data.List.Relation.Unary.All as All using (All)
 open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
 open import Data.Nat using (ℕ; zero; suc)
+open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Relation.Binary.PropositionalEquality
     using (_≡_; _≢_; refl; cong; subst; sym; trans)
@@ -19,7 +20,6 @@ open import Avionics.Real
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
            ⟨0,∞⟩; [0,∞⟩;
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0; q>0→√q>0)
-open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂)
 open import Avionics.Probability using (Dist; NormalDist; ND)
 
 sum : List ℝ → ℝ

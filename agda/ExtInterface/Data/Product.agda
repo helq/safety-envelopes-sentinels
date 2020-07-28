@@ -1,4 +1,4 @@
-module Avionics.Product where
+module ExtInterface.Data.Product where
 
 -- TODO: Write to Agda team about the lack of compilability of Sigma.
 -- I assumed that the builtin flag would allow to compile Σ into (,)

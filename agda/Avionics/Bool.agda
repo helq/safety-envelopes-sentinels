@@ -2,9 +2,10 @@ module Avionics.Bool where
 
 open import Data.Bool using (Bool; true; _∧_; T)
 open import Data.Unit using (⊤; tt)
+open import Data.Product using (_×_) renaming (_,_ to ⟨_,_⟩)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
-open import Avionics.Product using (_×_; ⟨_,_⟩)
+--open import Avionics.Product using (_×_; ⟨_,_⟩)
 
 --TODO: Replace with T⇔≡ from standard library
 ≡→T : ∀ {b : Bool} → b ≡ true → T b

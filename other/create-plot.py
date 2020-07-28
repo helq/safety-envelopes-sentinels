@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import ast
+import sys
 
 from typing import Optional, List, Any
 
@@ -71,17 +72,34 @@ def fig_plot(
     # plt.gca().yaxis.set_major_locator(plt.NullLocator())
 
     if save_as:
-        plt.savefig(f'plots/{save_as}.pgf')
-        plt.savefig(f'plots/{save_as}.png')
+        plt.savefig(f'{save_as}.pgf')
+        plt.savefig(f'{save_as}.png')
     else:
         plt.show()
 
 
 if __name__ == '__main__':
-    signal = np.array(readtxt('./generated.txt'))
-    mean_cf = np.array(readtxt('./mean-consistency-check.txt'))
-    sample_cf = np.array([(m, v, b) for (m, (v, b)) in readtxt('./sample-consistency-check.txt')])
+    # generated_path = './generated.txt'
+    # mean_path = './mean-consistency-check.txt'
+    # sample_path = './sample-consistency-check.txt'
+    # file_path = 'plots/consistency-m_mu_4-m_sigma_4'
 
-    # TODO: PLOT USING ONE STANDARD DEVIATION (m should be 4)
-    fig_plot(signal, mean_cf, sample_cf, save_as='consistency-m_mu_4-m_sigma_4')
+    if len(sys.argv) == 5:
+        generated_path = sys.argv[1]
+        mean_path = sys.argv[2]
+        sample_path = sys.argv[3]
+        file_path = sys.argv[4]
+    else:
+        print("You must supply four arguments")
+        print("1). Original signal input file path")
+        print("2). Result of mean consistency check file path")
+        print("3). Result of sample consistency check file path")
+        print("4). Plot output file path")
+        exit(1)
+
+    signal = np.array(readtxt(generated_path))
+    mean_cf = np.array(readtxt(mean_path))
+    sample_cf = np.array([(m, v, b) for (m, (v, b)) in readtxt(sample_path)])
+
+    fig_plot(signal, mean_cf, sample_cf, save_as=file_path)
     # fig_plot(signal, mean_cf, sample_cf)
