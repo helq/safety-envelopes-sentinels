@@ -24,8 +24,8 @@ open import Avionics.Probability using (Dist; NormalDist; ND)
 sum : List ℝ → ℝ
 sum = foldl _+_ 0ℝ
 
-inside : ℝ → ℝ → NormalDist → Bool
-inside z x nd = ((μ - z * σ) <ᵇ x) ∧ (x <ᵇ (μ + z * σ))
+inside : NormalDist → ℝ → ℝ → Bool
+inside nd z x = ((μ - z * σ) <ᵇ x) ∧ (x <ᵇ (μ + z * σ))
   where open NormalDist nd using (μ; σ)
 
 record Model : Set where
@@ -41,10 +41,10 @@ record Model : Set where
     --.lenfM>0 : length fM ≢ 0 -- this is the result of the bijection above and .lenSM>0
 
 z-predictable' : List NormalDist → ℝ → ℝ → ℝ × Bool
-z-predictable' nds z x = ⟨ x , any (inside z x) nds ⟩
+z-predictable' nds z x = ⟨ x , any (λ nd → inside nd z x) nds ⟩
 
 z-predictable : Model → ℝ → ℝ → ℝ × Bool
-z-predictable M = z-predictable' (map (proj₁ ∘ proj₂) (Model.fM M))
+z-predictable M z x = z-predictable' (map (proj₁ ∘ proj₂) (Model.fM M)) z x
 
 --
 

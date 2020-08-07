@@ -2,18 +2,18 @@ module Avionics.SafetyEnvelopes.Properties where
 
 open import Data.Bool using (Bool; true; false; _∧_; T)
 open import Data.Empty using (⊥; ⊥-elim)
-open import Data.List as List using (List; []; _∷_)
+open import Data.List as List using (List; []; _∷_; any)
 open import Data.List.Relation.Unary.Any as Any using (Any; here; there; satisfied)
 open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
-open import Data.Product using (∃-syntax; _×_; proj₁; proj₂; map) renaming (_,_ to ⟨_,_⟩)
+open import Data.Product as Prod using (∃-syntax; _×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; inspect; [_]; sym; trans)
 open import Relation.Nullary using (Dec; yes; no)
-open import Relation.Nullary.Decidable using (toWitness)
+open import Relation.Nullary.Decidable using (toWitness; fromWitness)
 open import Relation.Unary using (_∈_)
 
-open import Avionics.Bool using (≡→T; T∧→×)
-open import Avionics.List using (any-val)
+open import Avionics.Bool using (≡→T; T∧→×; ×→T∧)
+open import Avionics.List using (≡→any; any-map; any-map-rev; any→≡)
 open import Avionics.Real
     using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≢0;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
@@ -33,12 +33,19 @@ open NormalDist using (σ; μ)
 --<ᵇ→< : ∀ {x y} → T (x <ᵇ y) → x < y
 --<ᵇ→< = toWitness
 
+-- Preliminary defitinions
+
 -- `pi` is the prediction interval for the z score, i.e.,
 -- pi(N (μ, σ), z) = [μ − zσ, μ + zσ]
 pi : NormalDist → ℝ → ℝ → Set
-pi nd z x = (μ nd) - z * (σ nd) < x  ×  x < (μ nd) + z * (σ nd)
+pi nd z x =  (μ nd) - z * (σ nd) < x
+          ×  x < (μ nd) + z * (σ nd)
 
--- Proof that implementation follows from definition (Definition 2)
+extractDists : Model → List NormalDist
+extractDists M = List.map (proj₁ ∘ proj₂) (Model.fM M)
+
+------------------------------ Starting point - Theorem 1 ------------------------------
+-- Proof of Theorem 1 (paper)
 --
 -- In words, the Property 1 says that:
 --    The energy signal x is z-predictable iff there exist ⟨α, v⟩ s.t.
@@ -46,44 +53,82 @@ pi nd z x = (μ nd) - z * (σ nd) < x  ×  x < (μ nd) + z * (σ nd)
 --
 -- Notice that `Any (λ nd → x ∈ pi nd z) nds` translates to:
 -- there exists nd such that `nd ∈ nds` and `x ∈ pi(nd, z)`
-prop1 : ∀ (nds z x)
-      → z-predictable' nds z x ≡ ⟨ x , true ⟩
-      → Any (λ nd → x ∈ pi nd z) nds
-prop1 nds z x res≡x,true = Any-x∈pi
+theorem1←' : ∀ (nds z x)
+           → z-predictable' nds z x ≡ ⟨ x , true ⟩
+           → Any (λ nd → x ∈ pi nd z) nds
+theorem1←' nds z x res≡x,true = Any-x∈pi
   where
     res≡true = cong proj₂ res≡x,true
 
     -- the first `toWitness` takes a result `(μ nd - z * σ nd) <ᵇ x` (a
     -- boolean) and produces a proof of the type `(μ nd) - z * (σ nd) < x`
     -- assuming we have provided an operator `<?`
-    toWitness' = λ nd → map (toWitness {Q = (μ nd - z * σ nd) <? x})
-                            (toWitness {Q = x <? (μ nd + z * σ nd)})
+    toWitness' = λ nd → Prod.map (toWitness {Q = (μ nd - z * σ nd) <? x})
+                                 (toWitness {Q = x <? (μ nd + z * σ nd)})
 
     -- We find the value for which `inside z x` becomes true in the list `nds`
-    Any-bool = any-val (inside z x) nds res≡true
+    Any-bool = ≡→any (λ nd → inside nd z x) nds res≡true
     -- Converting the boolean proof into a proof at the type level
     Any-x∈pi = Any.map (λ {nd} → toWitness' nd ∘ T∧→×) Any-bool
 
+-- forward proof
+theorem1→' : ∀ (nds z x)
+           → Any (λ nd → x ∈ pi nd z) nds
+           → z-predictable' nds z x ≡ ⟨ x , true ⟩
+theorem1→' nds z x any[x∈pi-z]nds = let
+    -- converts a tuple of `(μ nd) - z * (σ nd) < x , x < (μ nd + z * σ nd)`
+    -- (a proof) into a boolean
+    fromWitness' nd = λ{⟨ μ-zσ<x , x<μ+zσ ⟩ →
+                ×→T∧ ⟨ (fromWitness {Q = (μ nd - z * σ nd) <? x} μ-zσ<x)
+                     , (fromWitness {Q = x <? (μ nd + z * σ nd)} x<μ+zσ)
+                     ⟩}
+
+    -- Converting from a proof on `_<_` to a proof on `_<ᵇ_`
+    any[inside]nds = (Any.map (λ {nd} → fromWitness' nd) any[x∈pi-z]nds)
+
+    -- Transforming the prove from Any into equality (_≡_)
+    z-pred-x≡⟨x,true⟩ = any→≡ (λ nd → inside nd z x) nds any[inside]nds
+
+     -- Extending the result from a single Bool value to a pair `ℝ × Bool`
+  in cong (⟨ x ,_⟩) z-pred-x≡⟨x,true⟩
+
 -- From the prove above we can obtain the value `nd` and its prove `x ∈ pi nd z`
 -- Note: An element of ∃[ nd ] (x ∈ pi nd z) is a tuple of the form ⟨ nd , proof ⟩
-prop1' : ∀ (nds z x)
-       → z-predictable' nds z x ≡ ⟨ x , true ⟩
-       → ∃[ nd ] (x ∈ pi nd z)
-prop1' nds z x res≡x,true = satisfied (prop1 nds z x res≡x,true)
+--prop1← : ∀ (nds z x)
+--       → z-predictable' nds z x ≡ ⟨ x , true ⟩
+--       → ∃[ nd ] (x ∈ pi nd z)
+--prop1← nds z x res≡x,true = satisfied (theorem1←' nds z x res≡x,true)
 
-extractDists : Model → List NormalDist
-extractDists M = List.map (proj₁ ∘ proj₂) (Model.fM M)
+theorem1←'' : ∀ (M z x)
+            → z-predictable M z x ≡ ⟨ x , true ⟩
+            → Any (λ nd → x ∈ pi nd z) (extractDists M)
+theorem1←'' M z x res≡x,true = theorem1←' (extractDists M) z x res≡x,true
 
--- ############ PROP 1 ############
-prop1M : ∀ (M z x)
-       → z-predictable M z x ≡ ⟨ x , true ⟩
-       → Any (λ nd → x ∈ pi nd z) (extractDists M)
-prop1M M z x res≡x,true = prop1 (extractDists M) z x res≡x,true
--- ############ PROP 1 END ############
+theorem1→'' : ∀ (M z x)
+            → Any (λ nd → x ∈ pi nd z) (extractDists M)
+            → z-predictable M z x ≡ ⟨ x , true ⟩
+theorem1→'' M z x Any[x∈pi-nd-z]M = theorem1→' (extractDists M) z x Any[x∈pi-nd-z]M
 
---postulate
---  P'[_❘X=_]_ : StallClasses → ℝ → Model → ℝ
+-- ############ FINAL RESULT - Theorem 1 ############
 
+-- In words: Given a Model `M` and parameter `z`, if `x` is z-predictable, then
+-- there exists a pair ⟨α,v⟩ (angle of attack and velocity) such that they are
+-- associated to a `nd` (Normal Distribution) and `x` falls withing the
+-- Predictable Interval
+theorem1← : ∀ (M z x)
+          → z-predictable M z x ≡ ⟨ x , true ⟩
+          → Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
+theorem1← M z x res≡x,true = any-map (proj₁ ∘ proj₂) (theorem1←'' M z x res≡x,true)
+
+-- The reverse of theorem1←
+theorem1→ : ∀ (M z x)
+          → Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
+          → z-predictable M z x ≡ ⟨ x , true ⟩
+theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M = theorem1→'' M z x (any-map-rev (proj₁ ∘ proj₂) Any[⟨α,v⟩→x∈pi-nd-z]M)
+
+-- ################# Theorem 1 END ##################
+
+------------------------------ Starting point - Theorem 2 ------------------------------
 lem← : ∀ (pbs τ x k)
      → classify'' pbs τ x ≡ just k
      → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
@@ -138,6 +183,7 @@ prop2M'← : ∀ (M τ x k)
 prop2M'← M τ x k τconf≡true = prop2M-prior← M τ x k (prop2M← M τ x k τconf≡true)
 -- ############ PROP 2 END ############
 
+------------------------------ Starting point - Theorem 3 ------------------------------
 ---- ############ PROP 3 ############
 prop3M← : ∀ (M z τ x)
         → safety-envelope M z τ x ≡ true

@@ -11,8 +11,13 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 ≡→T : ∀ {b : Bool} → b ≡ true → T b
 ≡→T refl = tt
 
+T→≡ : ∀ {b : Bool} → T b → b ≡ true
+T→≡ {true} tt = refl
+
 T∧→× : ∀ {x y} → T (x ∧ y) → (T x) × (T y)
 T∧→× {true} {true} tt = ⟨ tt , tt ⟩
 --TODO: Find a way to extract the function below from `T-∧` (standard library)
---T∧→× : ∀ {x y} → T (x ∧ y) → (T x) P.× (T y)
 --T∧→× {x} {y} = ? -- Equivalence.to (T-∧ {x} {y})
+
+×→T∧ : ∀ {x y} → (T x) × (T y) → T (x ∧ y)
+×→T∧ {true} {true} ⟨ tt , tt ⟩ = tt
