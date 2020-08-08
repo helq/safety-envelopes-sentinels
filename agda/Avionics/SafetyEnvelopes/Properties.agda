@@ -15,7 +15,7 @@ open import Relation.Unary using (_∈_)
 open import Avionics.Bool using (≡→T; T∧→×; ×→T∧)
 open import Avionics.List using (≡→any; any-map; any-map-rev; any→≡)
 open import Avionics.Real
-    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≢0;
+    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤_; _<_; _<?_; _≤?_; _≢0;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
            ⟨0,∞⟩; [0,∞⟩;
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0;
@@ -53,10 +53,10 @@ extractDists M = List.map (proj₁ ∘ proj₂) (Model.fM M)
 --
 -- Notice that `Any (λ nd → x ∈ pi nd z) nds` translates to:
 -- there exists nd such that `nd ∈ nds` and `x ∈ pi(nd, z)`
-theorem1←' : ∀ (nds z x)
-           → z-predictable' nds z x ≡ ⟨ x , true ⟩
-           → Any (λ nd → x ∈ pi nd z) nds
-theorem1←' nds z x res≡x,true = Any-x∈pi
+follows-def←' : ∀ (nds z x)
+              → z-predictable' nds z x ≡ ⟨ x , true ⟩
+              → Any (λ nd → x ∈ pi nd z) nds
+follows-def←' nds z x res≡x,true = Any-x∈pi
   where
     res≡true = cong proj₂ res≡x,true
 
@@ -72,10 +72,10 @@ theorem1←' nds z x res≡x,true = Any-x∈pi
     Any-x∈pi = Any.map (λ {nd} → toWitness' nd ∘ T∧→×) Any-bool
 
 -- forward proof
-theorem1→' : ∀ (nds z x)
-           → Any (λ nd → x ∈ pi nd z) nds
-           → z-predictable' nds z x ≡ ⟨ x , true ⟩
-theorem1→' nds z x any[x∈pi-z]nds = let
+follows-def→' : ∀ (nds z x)
+              → Any (λ nd → x ∈ pi nd z) nds
+              → z-predictable' nds z x ≡ ⟨ x , true ⟩
+follows-def→' nds z x any[x∈pi-z]nds = let
     -- converts a tuple of `(μ nd) - z * (σ nd) < x , x < (μ nd + z * σ nd)`
     -- (a proof) into a boolean
     fromWitness' nd = λ{⟨ μ-zσ<x , x<μ+zσ ⟩ →
@@ -97,17 +97,18 @@ theorem1→' nds z x any[x∈pi-z]nds = let
 --prop1← : ∀ (nds z x)
 --       → z-predictable' nds z x ≡ ⟨ x , true ⟩
 --       → ∃[ nd ] (x ∈ pi nd z)
---prop1← nds z x res≡x,true = satisfied (theorem1←' nds z x res≡x,true)
+--prop1← nds z x res≡x,true = satisfied (follows-def←' nds z x res≡x,true)
 
-theorem1←'' : ∀ (M z x)
-            → z-predictable M z x ≡ ⟨ x , true ⟩
-            → Any (λ nd → x ∈ pi nd z) (extractDists M)
-theorem1←'' M z x res≡x,true = theorem1←' (extractDists M) z x res≡x,true
+-- This proofs is telling us that `z-predictable` follows from the definition
+follows-def← : ∀ (M z x)
+             → z-predictable M z x ≡ ⟨ x , true ⟩
+             → Any (λ nd → x ∈ pi nd z) (extractDists M)
+follows-def← M z x res≡x,true = follows-def←' (extractDists M) z x res≡x,true
 
-theorem1→'' : ∀ (M z x)
-            → Any (λ nd → x ∈ pi nd z) (extractDists M)
-            → z-predictable M z x ≡ ⟨ x , true ⟩
-theorem1→'' M z x Any[x∈pi-nd-z]M = theorem1→' (extractDists M) z x Any[x∈pi-nd-z]M
+follows-def→ : ∀ (M z x)
+             → Any (λ nd → x ∈ pi nd z) (extractDists M)
+             → z-predictable M z x ≡ ⟨ x , true ⟩
+follows-def→ M z x Any[x∈pi-nd-z]M = follows-def→' (extractDists M) z x Any[x∈pi-nd-z]M
 
 -- ############ FINAL RESULT - Theorem 1 ############
 
@@ -118,46 +119,46 @@ theorem1→'' M z x Any[x∈pi-nd-z]M = theorem1→' (extractDists M) z x Any[x�
 theorem1← : ∀ (M z x)
           → z-predictable M z x ≡ ⟨ x , true ⟩
           → Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
-theorem1← M z x res≡x,true = any-map (proj₁ ∘ proj₂) (theorem1←'' M z x res≡x,true)
+theorem1← M z x res≡x,true = any-map (proj₁ ∘ proj₂) (follows-def← M z x res≡x,true)
 
 -- The reverse of theorem1←
 theorem1→ : ∀ (M z x)
           → Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
           → z-predictable M z x ≡ ⟨ x , true ⟩
-theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M = theorem1→'' M z x (any-map-rev (proj₁ ∘ proj₂) Any[⟨α,v⟩→x∈pi-nd-z]M)
+theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M = follows-def→ M z x (any-map-rev (proj₁ ∘ proj₂) Any[⟨α,v⟩→x∈pi-nd-z]M)
 
 -- ################# Theorem 1 END ##################
 
 ------------------------------ Starting point - Theorem 2 ------------------------------
 lem← : ∀ (pbs τ x k)
      → classify'' pbs τ x ≡ just k
-     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
+     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ ≤ p))
 lem← pbs τ x k _ with P[ Stall |X= x ] pbs | inspect (P[ Stall |X=_] pbs) x
-lem← _ τ _ _       _ | just p | [ _ ] with τ <? p | τ <? (1ℝ - p)
-lem← _ _ _ Stall   _ | just p | [ P[k|X=x]≡justp ] | yes τ<p | no ¬τ<1-p = ⟨ p , ⟨ P[k|X=x]≡justp , τ<p ⟩ ⟩
-lem← _ _ _ NoStall _ | just p | [ P[k|X=x]≡justp ] | no ¬τ<p | yes τ<1-p =
+lem← _ τ _ _       _ | just p | [ _ ] with τ ≤? p | τ ≤? (1ℝ - p)
+lem← _ _ _ Stall   _ | just p | [ P[k|X=x]≡justp ] | yes τ≤p | no ¬τ≤1-p = ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩
+lem← _ _ _ NoStall _ | just p | [ P[k|X=x]≡justp ] | no ¬τ≤p | yes τ≤1-p =
   let P[NoStall|X=x]≡just1-p = Stall≡1-NoStall P[k|X=x]≡justp
-  in ⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ<1-p ⟩ ⟩
+  in ⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ≤1-p ⟩ ⟩
 
 lem→ : ∀ (pbs τ x k)
-     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ < p))
+     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ ≤ p))
      → classify'' pbs τ x ≡ just k
-lem→ M τ x k ⟨ p , ⟨ P[k|X=x]M , τ<p ⟩ ⟩ = ?
+lem→ M τ x k ⟨ p , ⟨ P[k|X=x]M , τ≤p ⟩ ⟩ = ?
 --lem→ pbs _ x Stall _ with P[ Stall |X= x ] pbs
---lem→ _ τ _ _ _ | just p with τ <? p | τ <? (1ℝ - p)
+--lem→ _ τ _ _ _ | just p with τ ≤? p | τ ≤? (1ℝ - p)
 --lem→ _ _ _ _ _ | just p | yes _ | no  _ = ?
 --lem→ _ _ _ _ _ | just p | no  _ | yes _ = ?
 --lem→ _ _ _ _ _ | just p | _     | _ = ?
 --lem→ _ _ _ _ _ | nothing = ?
 
 prop2M-prior→ : ∀ (M τ x k)
-              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
               → classify M τ x ≡ just k
 prop2M-prior→ M = lem→ (M→pbs M)
 
 prop2M-prior← : ∀ (M τ x k)
               → classify M τ x ≡ just k
-              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
 prop2M-prior← M = lem← (M→pbs M)
 
 prop2M→ : ∀ (M τ x k)
@@ -173,13 +174,13 @@ prop2M← M τ x k τconf≡true = ?
 
 -- ############ PROP 2 ############
 prop2M'→ : ∀ (M τ x k)
-         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
          → τ-confident M τ x ≡ true
 prop2M'→ M τ x k ⟨p,⟩ = prop2M→ M τ x k (prop2M-prior→ M τ x k ⟨p,⟩)
 
 prop2M'← : ∀ (M τ x k)
          → τ-confident M τ x ≡ true
-         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p))
+         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
 prop2M'← M τ x k τconf≡true = prop2M-prior← M τ x k (prop2M← M τ x k τconf≡true)
 -- ############ PROP 2 END ############
 
@@ -188,7 +189,7 @@ prop2M'← M τ x k τconf≡true = prop2M-prior← M τ x k (prop2M← M τ x k
 prop3M← : ∀ (M z τ x)
         → safety-envelope M z τ x ≡ true
         → (Any (λ nd → x ∈ pi nd z) (extractDists M))
-          × ∃[ k ] (classify M τ x ≡ just k  ×  ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ < p)))
+          × ∃[ k ] (classify M τ x ≡ just k  ×  ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)))
 prop3M← M z τ x seM≡true = ?
 
 --prop3M'← : ∀ (M z τ x)

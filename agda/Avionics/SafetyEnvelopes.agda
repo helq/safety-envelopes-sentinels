@@ -15,7 +15,7 @@ open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (fromWitnessFalse)
 
 open import Avionics.Real
-    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≟_;
+    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≤?_; _≟_;
            1/_;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ)
 --open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂)
@@ -111,7 +111,7 @@ postulate
 classify'' : List (ℝ × ℝ × Dist ℝ) → ℝ → ℝ → Maybe StallClasses
 classify'' pbs τ x with P[ Stall |X= x ] pbs
 ...   | nothing = nothing
-...   | just p with τ <? p | τ <? (1ℝ - p)
+...   | just p with τ ≤? p | τ ≤? (1ℝ - p)
 ...            | yes _ | no  _ = just Stall
 ...            | no _  | yes _ = just NoStall
 ...            | _  | _ = nothing -- the only missing case is `no _ | no _`, `yes _ | yes _` is not possible

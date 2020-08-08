@@ -2,7 +2,6 @@
 
 This project contains the Agda and Haskell code mentioned in the [paper](http://wcl.cs.rpi.edu/bib/Year/2020.complete.html#cruz-dddas-2020).
 
-
 ## To compile
 
 To compile the code you need [stack](https://docs.haskellstack.org/en/stable/README/).
@@ -11,12 +10,12 @@ To compile the code you need [stack](https://docs.haskellstack.org/en/stable/REA
 
 To typecheck and compile the Agda code into Haskell code run the following in the command line:
 
-~~~sh
+```sh
 rm -r src/MAlonzo
 cd agda
 stack exec -- agda -c --ghc-dont-call-ghc --no-main --compile-dir=../src Avionics/SafetyEnvelopes/ExtInterface.agda
 cd ..
-~~~
+```
 
 If the previous lines run without errors it means that the Agda code typedchecked.
 
@@ -26,15 +25,28 @@ A new folder should have appeared `src/Alonzo`. It contains the code generated f
 
 The generated code needs to be compiled to be run:
 
-~~~sh
+```sh
 stack build
-~~~
+```
 
 ## To run the code
 
-~~~sh
+```sh
 stack exec -- sentinels-exe
-~~~
+```
+## To produce LaTeX code
+
+- Copy file to generate LaTex from `.agda` to `.lagda`. Rename `.agda` file into
+    `.agda.old` to evade name collisions.
+- Surround code with `\begin{code} \end{code}`
+
+```sh
+cd agda
+stack exec -- agda --latex Avionics/MyFileToGenerateLaTeX.lagda
+cd ..
+```
+
+- Delete `.lagda` file and restore `.agda` file from `.agda.old`
 
 ---
 

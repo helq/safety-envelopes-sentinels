@@ -28,9 +28,9 @@ main_single = do
   -- TODO: Open files to read and write
   -- TODO: Replace P.stdinLn with P.withHandle
   -- TODO: Replace P.stdoutLn with custom function to output more than one value
-  let multiplier = 4.0
+  let z = 4.0
       airspeed_i = 2
-      c = checkZPredictable airspeed_i multiplier
+      c = checkZPredictable airspeed_i z
 
   runEffect $ P.stdinLn
             >-> P.map (\x-> show . c $ read x)
@@ -39,7 +39,7 @@ main_single = do
 
 main_sample :: IO ()
 main_sample = do
-  let multiplier = 4.0
+  let z = 4.0
       mul_var = 4.0
       airspeed_i = 2
       sample_n = 10
@@ -49,7 +49,7 @@ main_sample = do
   let samples = takeWhile ((==sample_n) . length) $ (take sample_n) <$> tails (map read lines)
   forM samples $ \sample-> do
     --print $ sample
-    print $ checkSampleZPredictable airspeed_i multiplier mul_var sample
+    print $ checkSampleZPredictable airspeed_i z mul_var sample
   return ()
 
 -- TODO: This is not lazy. This should go away once pipes are used
