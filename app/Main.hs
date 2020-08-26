@@ -19,7 +19,7 @@ main = do
   case args of
     ["single"] -> main_single
     ["sample"] -> main_sample
-    _ -> putStrLn "You need to supply a parameter to check data. Either `mean` or `sample`"
+    _ -> putStrLn "You need to supply a parameter to check data. Either `single` or `sample`"
 
 
 main_single :: IO ()
@@ -29,7 +29,7 @@ main_single = do
   -- TODO: Replace P.stdinLn with P.withHandle
   -- TODO: Replace P.stdoutLn with custom function to output more than one value
   let z = 4.0
-      airspeed_i = 2
+      airspeed_i = 1
       c = checkZPredictable airspeed_i z
 
   runEffect $ P.stdinLn

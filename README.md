@@ -32,7 +32,7 @@ stack build
 ## To run the code
 
 ```sh
-stack exec -- sentinels-exe
+stack exec -- sentinels-exe single
 ```
 ## To produce LaTeX code
 

@@ -25,7 +25,7 @@ def generate_data(airspeed_i: int, aoa_i: int, noise: float) -> np.ndarray:
 
 
 if __name__ == '__main__':
-    airspeed_i = 0
+    airspeed_i = 1
     aoa_i = 5
     # noise = 6.0
 
