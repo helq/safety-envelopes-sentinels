@@ -11,7 +11,7 @@ open import Function using (_∘_)
 open import Relation.Binary.PropositionalEquality
     using (_≡_; _≢_; refl; cong; subst; sym; trans)
 open import Relation.Unary using (_∈_)
-open import Relation.Nullary using (yes; no)
+open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (fromWitnessFalse)
 
 open import Avionics.Real
@@ -75,7 +75,7 @@ nonneg-cf : ℝ → ℝ × Bool
 nonneg-cf x = ⟨ x , 0ℝ ≤ᵇ x ⟩
 
 data StallClasses : Set where
-  Stall NoStall : StallClasses
+  Stall NoStall Uncertain : StallClasses
 
 
 P[stall]f⟨_|stall⟩_ : ℝ → List (ℝ × ℝ × Dist ℝ) → ℝ
@@ -94,11 +94,13 @@ f⟨ x ⟩ pbs = sum (map unpack pbs)
 
 -- There should be a proof showing that the resulting value will always be in the interval [0,1]
 P[_|X=_]_ : StallClasses → ℝ → List (ℝ × ℝ × Dist ℝ) → Maybe ℝ
-P[ klass |X= x ] pbs with f⟨ x ⟩ pbs ≟ 0ℝ
+P[ Stall |X= x ] pbs with f⟨ x ⟩ pbs ≟ 0ℝ
 ... | yes _ = nothing
-... | no _ with klass -- f⟨x⟩ ≢ 0
-...       | Stall   = just (((P[stall]f⟨ x |stall⟩ pbs) ÷ (f⟨ x ⟩ pbs)))
-...       | NoStall = just (1ℝ - ((P[stall]f⟨ x |stall⟩ pbs) ÷ (f⟨ x ⟩ pbs)))
+... | no _  = just (((P[stall]f⟨ x |stall⟩ pbs) ÷ (f⟨ x ⟩ pbs)))
+P[ NoStall |X= x ] pbs with f⟨ x ⟩ pbs ≟ 0ℝ
+... | yes _ = nothing
+... | no _  = just (1ℝ - ((P[stall]f⟨ x |stall⟩ pbs) ÷ (f⟨ x ⟩ pbs)))
+P[ Uncertain |X= _ ] _ = nothing
 
 postulate
   -- TODO: Find out how to prove this!
@@ -106,15 +108,28 @@ postulate
   Stall≡1-NoStall : ∀ {x pbs p}
                   → P[ Stall |X= x ] pbs ≡ just p
                   → P[ NoStall |X= x ] pbs ≡ just (1ℝ - p)
+  NoStall≡1-Stall : ∀ {x pbs p}
+                  → P[ NoStall |X= x ] pbs ≡ just p
+                  → P[ Stall |X= x ] pbs ≡ just (1ℝ - p)
+
+  -- CAREFUL!
+  -- This main assumption comes from the following facts:
+  --   * 0.5 < τ ≤ 1
+  --   * 0 ≤ p ≤ 1
+  -- Of course, these assumptions are never explicit in the code. But note
+  -- that, only the first assumption can be broken by an user bad input. The
+  -- second assumptions stems for probability theory, yet not proven
+  ≤p→¬≤1-p : ∀ {τ p} → τ ≤ p → ¬ τ ≤ (1ℝ - p)
+  ≤1-p→¬≤p : ∀ {τ p} → τ ≤ (1ℝ - p) → ¬ τ ≤ p
 
 
-classify'' : List (ℝ × ℝ × Dist ℝ) → ℝ → ℝ → Maybe StallClasses
+classify'' : List (ℝ × ℝ × Dist ℝ) → ℝ → ℝ → StallClasses
 classify'' pbs τ x with P[ Stall |X= x ] pbs
-...   | nothing = nothing
+...   | nothing = Uncertain
 ...   | just p with τ ≤? p | τ ≤? (1ℝ - p)
-...            | yes _ | no  _ = just Stall
-...            | no _  | yes _ = just NoStall
-...            | _  | _ = nothing -- the only missing case is `no _ | no _`, `yes _ | yes _` is not possible
+...            | yes _ | no  _ = Stall
+...            | no _  | yes _ = NoStall
+...            | _     | _     = Uncertain -- the only missing case is `no _ | no _`, `yes _ | yes _` is not possible
 
 M→pbs : Model → List (ℝ × ℝ × Dist ℝ)
 M→pbs M = map convert (Model.fM M)
@@ -125,11 +140,15 @@ M→pbs M = map convert (Model.fM M)
     convert ⟨ _ , ⟨ nd , P[stall|c] ⟩ ⟩ = ⟨ 1/ n , ⟨ P[stall|c] , dist ⟩ ⟩
       where open NormalDist nd using (dist)
 
-classify : Model → ℝ → ℝ → Maybe StallClasses
+classify : Model → ℝ → ℝ → StallClasses
 classify M = classify'' (M→pbs M)
 
+no-uncertain : StallClasses → Bool
+no-uncertain Uncertain = false
+no-uncertain _ = true
+
 τ-confident : Model → ℝ → ℝ → Bool
-τ-confident M τ = is-just ∘ classify M τ
+τ-confident M τ = no-uncertain ∘ classify M τ
 
 safety-envelope : Model → ℝ → ℝ → ℝ → Bool
 safety-envelope M z τ x = proj₂ (z-predictable M z x)

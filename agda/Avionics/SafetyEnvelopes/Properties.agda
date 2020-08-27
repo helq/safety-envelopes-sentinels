@@ -6,26 +6,29 @@ open import Data.List as List using (List; []; _∷_; any)
 open import Data.List.Relation.Unary.Any as Any using (Any; here; there; satisfied)
 open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
 open import Data.Product as Prod using (∃-syntax; _×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (_∘_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; inspect; [_]; sym; trans)
-open import Relation.Nullary using (Dec; yes; no)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; cong₂; inspect; [_]; sym; trans)
+open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Nullary.Decidable using (toWitness; fromWitness)
 open import Relation.Unary using (_∈_)
 
-open import Avionics.Bool using (≡→T; T∧→×; ×→T∧)
+open import Avionics.Bool using (≡→T; T∧→×; ×→T∧; lem∧)
 open import Avionics.List using (≡→any; any-map; any-map-rev; any→≡)
 open import Avionics.Real
     using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤_; _<_; _<?_; _≤?_; _≢0;
            0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
+           double-neg;
            ⟨0,∞⟩; [0,∞⟩;
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0;
            0≟0≡yes0≡0)
 open import Avionics.Probability using (NormalDist; Dist)
 open import Avionics.SafetyEnvelopes
     using (inside; z-predictable'; P[_|X=_]_; classify''; classify; M→pbs;
-           StallClasses; Stall; NoStall;
+           StallClasses; Stall; NoStall; Uncertain;
+           no-uncertain;
            safety-envelope; z-predictable; Model; τ-confident;
-           Stall≡1-NoStall
+           Stall≡1-NoStall; NoStall≡1-Stall; ≤p→¬≤1-p; ≤1-p→¬≤p
            )
 
 open NormalDist using (σ; μ)
@@ -131,69 +134,117 @@ theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M = follows-def→ M z x (any-map
 
 ------------------------------ Starting point - Theorem 2 ------------------------------
 lem← : ∀ (pbs τ x k)
-     → classify'' pbs τ x ≡ just k
-     → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ ≤ p))
+     → classify'' pbs τ x ≡ k
+     → k ≡ Uncertain ⊎ ∃[ p ] ((P[ k |X= x ] pbs ≡ just p) × (τ ≤ p))
 lem← pbs τ x k _ with P[ Stall |X= x ] pbs | inspect (P[ Stall |X=_] pbs) x
-lem← _ τ _ _       _ | just p | [ _ ] with τ ≤? p | τ ≤? (1ℝ - p)
-lem← _ _ _ Stall   _ | just p | [ P[k|X=x]≡justp ] | yes τ≤p | no ¬τ≤1-p = ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩
-lem← _ _ _ NoStall _ | just p | [ P[k|X=x]≡justp ] | no ¬τ≤p | yes τ≤1-p =
+lem← _ _ _ Uncertain _ | nothing | [ P[k|X=x]≡nothing ] = inj₁ refl
+lem← _ τ _ _       _   | just p  | [ _ ] with τ ≤? p | τ ≤? (1ℝ - p)
+lem← _ _ _ Stall   _   | just p  | [ P[k|X=x]≡justp ] | yes τ≤p | no ¬τ≤1-p = inj₂ ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩
+lem← _ _ _ NoStall _   | just p  | [ P[k|X=x]≡justp ] | no ¬τ≤p | yes τ≤1-p =
   let P[NoStall|X=x]≡just1-p = Stall≡1-NoStall P[k|X=x]≡justp
-  in ⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ≤1-p ⟩ ⟩
+  in inj₂ ⟨ 1ℝ - p , ⟨ P[NoStall|X=x]≡just1-p , τ≤1-p ⟩ ⟩
+lem← _ _ _ Uncertain _ | _       | _ | _ | _ = inj₁ refl
+
+lem→' : ∀ (pbs τ x p)
+      → (P[ Stall |X= x ] pbs) ≡ just p
+      → τ ≤ (1ℝ - p)
+      → classify'' pbs τ x ≡ NoStall
+lem→' pbs _ x _ _ _ with P[ Stall |X= x ] pbs
+lem→' _ τ _ _ _ _ | just p with τ ≤? p | τ ≤? (1ℝ - p)
+lem→' _ _ _ _ _    _     | just p | no _    | yes _     = refl
+lem→' _ _ _ _ refl τ≤1-p | just p | _       | no ¬τ≤1-p = ⊥-elim (¬τ≤1-p τ≤1-p)
+lem→' _ _ _ _ refl τ≤1-p | just p | yes τ≤p | yes _     = ⊥-elim (¬τ≤p τ≤p)
+  where ¬τ≤p = ≤1-p→¬≤p τ≤1-p
+
+τ≤p→τ≤1-⟨1-p⟩ : ∀ τ p → τ ≤ p → τ ≤ 1ℝ - (1ℝ - p)
+τ≤p→τ≤1-⟨1-p⟩ τ p τ≤p rewrite double-neg p 1ℝ = τ≤p
 
 lem→ : ∀ (pbs τ x k)
      → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ ≤ p))
-     → classify'' pbs τ x ≡ just k
-lem→ M τ x k ⟨ p , ⟨ P[k|X=x]M , τ≤p ⟩ ⟩ = ?
---lem→ pbs _ x Stall _ with P[ Stall |X= x ] pbs
---lem→ _ τ _ _ _ | just p with τ ≤? p | τ ≤? (1ℝ - p)
---lem→ _ _ _ _ _ | just p | yes _ | no  _ = ?
---lem→ _ _ _ _ _ | just p | no  _ | yes _ = ?
---lem→ _ _ _ _ _ | just p | _     | _ = ?
---lem→ _ _ _ _ _ | nothing = ?
+     → classify'' pbs τ x ≡ k
+lem→ pbs _ x Stall _ with P[ Stall |X= x ] pbs
+lem→ _ τ _ _ _                      | just p with τ ≤? p | τ ≤? (1ℝ - p)
+lem→ _ _ _ _ _                      | just p | yes _   | no  _     = refl
+lem→ _ _ _ _ ⟨ _ , ⟨ refl , τ≤p ⟩ ⟩ | just p | no ¬τ≤p | _         = ⊥-elim (¬τ≤p τ≤p)
+lem→ _ _ _ _ ⟨ _ , ⟨ refl , τ≤p ⟩ ⟩ | just p | yes _   | yes τ≤1-p = ⊥-elim (¬τ≤1-p τ≤1-p)
+  where ¬τ≤1-p = ≤p→¬≤1-p τ≤p
+lem→ pbs τ x NoStall ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩ = let
+    P[S|X=x]≡just1-p = NoStall≡1-Stall P[k|X=x]≡justp
+    τ≤1-⟨1-p⟩ = τ≤p→τ≤1-⟨1-p⟩ τ p τ≤p
+  in lem→' pbs τ x (1ℝ - p) P[S|X=x]≡just1-p τ≤1-⟨1-p⟩
+
+prop2M-prior← : ∀ (M τ x k)
+              → classify M τ x ≡ k
+              → k ≡ Uncertain ⊎ ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
+prop2M-prior← M = lem← (M→pbs M)
+
+prop2M-prior←' : ∀ (M τ x k)
+               → k ≡ Stall ⊎ k ≡ NoStall
+               → classify M τ x ≡ k
+               → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
+prop2M-prior←' M τ x k _ cMτx≡k with prop2M-prior← M τ x k cMτx≡k
+prop2M-prior←' _ _ _ Stall   (inj₁ _) _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
+prop2M-prior←' _ _ _ NoStall _        _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
 
 prop2M-prior→ : ∀ (M τ x k)
               → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
-              → classify M τ x ≡ just k
+              → classify M τ x ≡ k
 prop2M-prior→ M = lem→ (M→pbs M)
 
-prop2M-prior← : ∀ (M τ x k)
-              → classify M τ x ≡ just k
-              → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
-prop2M-prior← M = lem← (M→pbs M)
+prop2M← : ∀ (M τ x)
+       → τ-confident M τ x ≡ true
+       → ∃[ k ] ((classify M τ x ≡ k) × (k ≡ Stall ⊎ k ≡ NoStall))
+prop2M← M τ x τconf≡true with classify M τ x
+... | Stall   = ⟨ Stall ,   ⟨ refl , inj₁ refl ⟩ ⟩
+... | NoStall = ⟨ NoStall , ⟨ refl , inj₂ refl ⟩ ⟩
 
 prop2M→ : ∀ (M τ x k)
-        → classify M τ x ≡ just k
+        → k ≡ Stall ⊎ k ≡ NoStall
+        → classify M τ x ≡ k
         → τ-confident M τ x ≡ true
-prop2M→ M τ x k cMτx≡k = cong is-just cMτx≡k
+prop2M→ M τ x Stall   (inj₁ k≡Stall)   cMτx≡k = cong no-uncertain cMτx≡k
+prop2M→ M τ x NoStall (inj₂ k≡NoStall) cMτx≡k = cong no-uncertain cMτx≡k
 
--- Not extrictly true, it requires an existential quantification
-prop2M← : ∀ (M τ x k)
-       → τ-confident M τ x ≡ true
-       → classify M τ x ≡ just k
-prop2M← M τ x k τconf≡true = ?
+---- ############ FINAL RESULT - Theorem 2 ############
+-- Theorem 2 says:
+-- a classification k is τ-confident iff τ ≤ P[ k | X = x ]
+theorem2← : ∀ (M τ x)
+          → τ-confident M τ x ≡ true
+          → ∃[ k ] (∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))) -- which means: τ ≤ P[ k | X = x ]
+theorem2← M τ x τconf≡true = let -- prop2M-prior← M τ x k (prop2M← M τ x k τconf≡true)
+  ⟨ k , ⟨ cMτx≡k , k≢Uncertain ⟩ ⟩ = prop2M← M τ x τconf≡true
+  in ⟨ k , prop2M-prior←' M τ x k k≢Uncertain cMτx≡k ⟩
 
--- ############ PROP 2 ############
-prop2M'→ : ∀ (M τ x k)
-         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
-         → τ-confident M τ x ≡ true
-prop2M'→ M τ x k ⟨p,⟩ = prop2M→ M τ x k (prop2M-prior→ M τ x k ⟨p,⟩)
-
-prop2M'← : ∀ (M τ x k)
-         → τ-confident M τ x ≡ true
-         → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
-prop2M'← M τ x k τconf≡true = prop2M-prior← M τ x k (prop2M← M τ x k τconf≡true)
--- ############ PROP 2 END ############
+theorem2→ : ∀ (M τ x k)
+          → k ≡ Stall ⊎ k ≡ NoStall
+          → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)) -- which means: τ ≤ P[ k | X = x ]
+          → τ-confident M τ x ≡ true
+theorem2→ M τ x k k≢Uncertain ⟨p,⟩ = prop2M→ M τ x k k≢Uncertain (prop2M-prior→ M τ x k ⟨p,⟩)
+---- ############ Theorem 2 END ############
 
 ------------------------------ Starting point - Theorem 3 ------------------------------
----- ############ PROP 3 ############
+---- ############ FINAL RESULT - Theorem 3 ############
+-- The final theorem is more a corolary. It follows from Theorem 1 and 2
 prop3M← : ∀ (M z τ x)
         → safety-envelope M z τ x ≡ true
-        → (Any (λ nd → x ∈ pi nd z) (extractDists M))
-          × ∃[ k ] (classify M τ x ≡ just k  ×  ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)))
-prop3M← M z τ x seM≡true = ?
+        → (Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
+          × ∃[ k ] (∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)))
+prop3M← M z τ x seM≡true = let
+    -- Taking from the safety-envelope definition its components
+    ⟨ left , τ-conf ⟩ =
+              lem∧ {a = proj₂ (z-predictable M z x)}
+                   {b = τ-confident M τ x}
+                   seM≡true
+    z-pred-x≡⟨x,true⟩ = cong (⟨ x ,_⟩) left
+  in ⟨ theorem1← M z x z-pred-x≡⟨x,true⟩ , theorem2← M τ x τ-conf ⟩
 
---prop3M'← : ∀ (M z τ x)
---        → safety-envelope M z τ x ≡ true
---        → z-predictable M z x ≡ ⟨ x , true ⟩  ×  τ-confident M τ x ≡ true
---prop3M'← = ?
----- ############ PROP 3 END ############
+prop3M→ : ∀ (M z τ x k)
+        → k ≡ Stall ⊎ k ≡ NoStall
+        → (Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
+          × ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
+        → safety-envelope M z τ x ≡ true
+prop3M→ M z τ x k k≢Uncertain ⟨ Any[⟨α,v⟩→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
+  z-pred≡⟨x,true⟩ = theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M
+  τ-conf          = theorem2→ M τ x k k≢Uncertain ⟨p,⟩
+  in cong₂ (_∧_) (cong proj₂ z-pred≡⟨x,true⟩) τ-conf
+---- ############ Theorem 3 END ############
