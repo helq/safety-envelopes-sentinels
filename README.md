@@ -34,6 +34,11 @@ stack build
 ```sh
 stack exec -- sentinels-exe single
 ```
+
+Once the sentinel is running it will read from stdin a list of floating point numbers and
+it determine if the value is z-predictable, i.e., falls within certain confidence region
+where the models make sense.
+
 ## To produce LaTeX code
 
 - Copy file to generate LaTex from `.agda` to `.lagda`. Rename `.agda` file into

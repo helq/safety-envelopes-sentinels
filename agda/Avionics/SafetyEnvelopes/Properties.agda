@@ -17,7 +17,7 @@ open import Avionics.Bool using (≡→T; T∧→×; ×→T∧; lem∧)
 open import Avionics.List using (≡→any; any-map; any-map-rev; any→≡)
 open import Avionics.Real
     using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤_; _<_; _<?_; _≤?_; _≢0;
-           0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ;
+           0ℝ; 1ℝ; 2ℝ; 1/2; _^2; √_; fromℕ;
            double-neg;
            ⟨0,∞⟩; [0,∞⟩;
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0;
@@ -146,32 +146,48 @@ lem← _ _ _ NoStall _   | just p  | [ P[k|X=x]≡justp ] | no ¬τ≤p | yes τ
 lem← _ _ _ Uncertain _ | _       | _ | _ | _ = inj₁ refl
 
 lem→' : ∀ (pbs τ x p)
+      -- This line is asking for the main assumptions for the code to work properly:
+      --   * 0.5 < τ ≤ 1
+      --   * 0 ≤ p ≤ 1
+      → (1/2 < τ × τ ≤ 1ℝ) × (0ℝ ≤ p × p ≤ 1ℝ)
       → (P[ Stall |X= x ] pbs) ≡ just p
       → τ ≤ (1ℝ - p)
       → classify'' pbs τ x ≡ NoStall
-lem→' pbs _ x _ _ _ with P[ Stall |X= x ] pbs
-lem→' _ τ _ _ _ _ | just p with τ ≤? p | τ ≤? (1ℝ - p)
-lem→' _ _ _ _ _    _     | just p | no _    | yes _     = refl
-lem→' _ _ _ _ refl τ≤1-p | just p | _       | no ¬τ≤1-p = ⊥-elim (¬τ≤1-p τ≤1-p)
-lem→' _ _ _ _ refl τ≤1-p | just p | yes τ≤p | yes _     = ⊥-elim (¬τ≤p τ≤p)
-  where ¬τ≤p = ≤1-p→¬≤p τ≤1-p
+lem→' pbs _ x _ _ _ _ with P[ Stall |X= x ] pbs
+lem→' _ τ _ _ _ _    _     | just p with τ ≤? p | τ ≤? (1ℝ - p)
+lem→' _ _ _ _ _ _    _     | just p | no _    | yes _     = refl
+lem→' _ _ _ _ _ refl τ≤1-p | just p | _       | no ¬τ≤1-p = ⊥-elim (¬τ≤1-p τ≤1-p)
+lem→' _ _ _ _ assumpts refl τ≤1-p | just p | yes τ≤p | yes _     = ⊥-elim (¬τ≤p τ≤p)
+  where
+    1/2<τ = proj₁ (proj₁ assumpts)
+    τ≤1 = proj₂ (proj₁ assumpts)
+    0≤p = proj₁ (proj₂ assumpts)
+    p≤1 = proj₂ (proj₂ assumpts)
+    ¬τ≤p = ≤1-p→¬≤p 1/2<τ τ≤1 0≤p p≤1 τ≤1-p
 
 τ≤p→τ≤1-⟨1-p⟩ : ∀ τ p → τ ≤ p → τ ≤ 1ℝ - (1ℝ - p)
 τ≤p→τ≤1-⟨1-p⟩ τ p τ≤p rewrite double-neg p 1ℝ = τ≤p
 
 lem→ : ∀ (pbs τ x k)
+     → (1/2 < τ × τ ≤ 1ℝ)
      → ∃[ p ] (((P[ k |X= x ] pbs) ≡ just p) × (τ ≤ p))
      → classify'' pbs τ x ≡ k
-lem→ pbs _ x Stall _ with P[ Stall |X= x ] pbs
-lem→ _ τ _ _ _                      | just p with τ ≤? p | τ ≤? (1ℝ - p)
-lem→ _ _ _ _ _                      | just p | yes _   | no  _     = refl
-lem→ _ _ _ _ ⟨ _ , ⟨ refl , τ≤p ⟩ ⟩ | just p | no ¬τ≤p | _         = ⊥-elim (¬τ≤p τ≤p)
-lem→ _ _ _ _ ⟨ _ , ⟨ refl , τ≤p ⟩ ⟩ | just p | yes _   | yes τ≤1-p = ⊥-elim (¬τ≤1-p τ≤1-p)
-  where ¬τ≤1-p = ≤p→¬≤1-p τ≤p
-lem→ pbs τ x NoStall ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩ = let
+lem→ pbs _ x Stall _ _ with P[ Stall |X= x ] pbs
+lem→ _ τ _ _ _       _                      | just p with τ ≤? p | τ ≤? (1ℝ - p)
+lem→ _ _ _ _ _       _                      | just p | yes _   | no  _     = refl
+lem→ _ _ _ _ _       ⟨ _ , ⟨ refl , τ≤p ⟩ ⟩ | just p | no ¬τ≤p | _         = ⊥-elim (¬τ≤p τ≤p)
+lem→ _ _ _ _ 1/2<τ≤1 ⟨ _ , ⟨ refl , τ≤p ⟩ ⟩ | just p | yes _   | yes τ≤1-p = ⊥-elim (¬τ≤1-p τ≤1-p)
+  where 1/2<τ = proj₁ 1/2<τ≤1
+        τ≤1 = proj₂ 1/2<τ≤1
+        postulate 0≤p : 0ℝ ≤ p
+                  p≤1 : p ≤ 1ℝ
+        ¬τ≤1-p = ≤p→¬≤1-p 1/2<τ τ≤1 0≤p p≤1 τ≤p
+lem→ pbs τ x NoStall 1/2<τ≤1 ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩ = let
     P[S|X=x]≡just1-p = NoStall≡1-Stall P[k|X=x]≡justp
     τ≤1-⟨1-p⟩ = τ≤p→τ≤1-⟨1-p⟩ τ p τ≤p
-  in lem→' pbs τ x (1ℝ - p) P[S|X=x]≡just1-p τ≤1-⟨1-p⟩
+    assumptions = ⟨ 1/2<τ≤1 , 0≤p≤1 ⟩
+  in lem→' pbs τ x (1ℝ - p) assumptions P[S|X=x]≡just1-p τ≤1-⟨1-p⟩
+  where postulate 0≤p≤1 : (0ℝ ≤ 1ℝ - p × 1ℝ - p ≤ 1ℝ)
 
 prop2M-prior← : ∀ (M τ x k)
               → classify M τ x ≡ k
@@ -187,9 +203,10 @@ prop2M-prior←' _ _ _ Stall   (inj₁ _) _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥
 prop2M-prior←' _ _ _ NoStall _        _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
 
 prop2M-prior→ : ∀ (M τ x k)
+              → (1/2 < τ × τ ≤ 1ℝ)
               → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
               → classify M τ x ≡ k
-prop2M-prior→ M = lem→ (M→pbs M)
+prop2M-prior→ M τ x k 1/2<τ≤1 = lem→ (M→pbs M) τ x k 1/2<τ≤1
 
 prop2M← : ∀ (M τ x)
        → τ-confident M τ x ≡ true
@@ -216,10 +233,12 @@ theorem2← M τ x τconf≡true = let -- prop2M-prior← M τ x k (prop2M← M 
   in ⟨ k , prop2M-prior←' M τ x k k≢Uncertain cMτx≡k ⟩
 
 theorem2→ : ∀ (M τ x k)
+          → (1/2 < τ × τ ≤ 1ℝ)
           → k ≡ Stall ⊎ k ≡ NoStall
           → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)) -- which means: τ ≤ P[ k | X = x ]
           → τ-confident M τ x ≡ true
-theorem2→ M τ x k k≢Uncertain ⟨p,⟩ = prop2M→ M τ x k k≢Uncertain (prop2M-prior→ M τ x k ⟨p,⟩)
+theorem2→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩ =
+    prop2M→ M τ x k k≢Uncertain (prop2M-prior→ M τ x k 1/2<τ≤1 ⟨p,⟩)
 ---- ############ Theorem 2 END ############
 
 ------------------------------ Starting point - Theorem 3 ------------------------------
@@ -239,12 +258,13 @@ prop3M← M z τ x seM≡true = let
   in ⟨ theorem1← M z x z-pred-x≡⟨x,true⟩ , theorem2← M τ x τ-conf ⟩
 
 prop3M→ : ∀ (M z τ x k)
+        → (1/2 < τ × τ ≤ 1ℝ)
         → k ≡ Stall ⊎ k ≡ NoStall
         → (Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
           × ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
         → safety-envelope M z τ x ≡ true
-prop3M→ M z τ x k k≢Uncertain ⟨ Any[⟨α,v⟩→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
+prop3M→ M z τ x k 1/2<τ≤1 k≢Uncertain ⟨ Any[⟨α,v⟩→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
   z-pred≡⟨x,true⟩ = theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M
-  τ-conf          = theorem2→ M τ x k k≢Uncertain ⟨p,⟩
+  τ-conf          = theorem2→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩
   in cong₂ (_∧_) (cong proj₂ z-pred≡⟨x,true⟩) τ-conf
 ---- ############ Theorem 3 END ############

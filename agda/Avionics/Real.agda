@@ -28,7 +28,7 @@ postulate
 
   _+_ _-_ _*_ _^_ : ℝ → ℝ → ℝ
   _^2 : ℝ → ℝ
-  e π 0ℝ 1ℝ -1/2 2ℝ : ℝ
+  e π 0ℝ 1ℝ -1/2 1/2 2ℝ : ℝ
 
   -- This was inspired on how the standard library handles things.
   -- See: https://plfa.github.io/Decidable/

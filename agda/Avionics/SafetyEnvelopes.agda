@@ -17,7 +17,7 @@ open import Relation.Nullary.Decidable using (fromWitnessFalse)
 open import Avionics.Real
     using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤ᵇ_; _≤_; _<_; _<?_; _≤?_; _≟_;
            1/_;
-           0ℝ; 1ℝ; 2ℝ; _^2; √_; fromℕ)
+           0ℝ; 1ℝ; 2ℝ; 1/2; _^2; √_; fromℕ)
 --open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂)
 open import Avionics.Probability using (Dist; NormalDist; ND)
 
@@ -112,15 +112,24 @@ postulate
                   → P[ NoStall |X= x ] pbs ≡ just p
                   → P[ Stall |X= x ] pbs ≡ just (1ℝ - p)
 
-  -- CAREFUL!
-  -- This main assumption comes from the following facts:
+  -- Main assumptions
   --   * 0.5 < τ ≤ 1
   --   * 0 ≤ p ≤ 1
   -- Of course, these assumptions are never explicit in the code. But note
   -- that, only the first assumption can be broken by an user bad input. The
-  -- second assumptions stems for probability theory, yet not proven
-  ≤p→¬≤1-p : ∀ {τ p} → τ ≤ p → ¬ τ ≤ (1ℝ - p)
-  ≤1-p→¬≤p : ∀ {τ p} → τ ≤ (1ℝ - p) → ¬ τ ≤ p
+  -- second assumption stems for probability theory, yet not proven but
+  -- should be true
+  ≤p→¬≤1-p : ∀ {τ p}
+           -- This first line are the assumptions. From them, the rest should follow
+           → 1/2 < τ → τ ≤ 1ℝ   -- 0.5 < τ ≤ 1
+           → 0ℝ ≤ p → p ≤ 1ℝ  -- 0 ≤ p ≤ 1
+           → τ ≤ p
+           → ¬ τ ≤ (1ℝ - p)
+  ≤1-p→¬≤p : ∀ {τ p}
+           → 1/2 < τ → τ ≤ 1ℝ  -- 0.5 < τ ≤ 1
+           → 0ℝ ≤ p → p ≤ 1ℝ   -- 0 ≤ p ≤ 1
+           → τ ≤ (1ℝ - p)
+           → ¬ τ ≤ p
 
 
 classify'' : List (ℝ × ℝ × Dist ℝ) → ℝ → ℝ → StallClasses
