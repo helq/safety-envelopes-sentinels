@@ -14,9 +14,9 @@ def readtxt(file: str) -> List[Any]:
 
 
 def fig_plot(
-    signal: np.array,
-    mean_cf: np.array,
-    sample_cf: np.array,
+    signal: np.ndarray,
+    mean_cf: np.ndarray,
+    sample_cf: np.ndarray,
     save_as: Optional[str] = None
 ) -> None:
     if save_as:
@@ -31,7 +31,8 @@ def fig_plot(
         matplotlib.use('Qt5Agg')
 
     x = np.linspace(1.0, len(signal), len(signal))
-    x_sample = x[x.size-sample_cf.shape[0]:]
+    sample_cf_n = sample_cf.shape[0]
+    x_sample = x[x.size - sample_cf_n:]
 
     fig, ax = plt.subplots(
         nrows=4, sharex='col', gridspec_kw={'height_ratios': [5, 2, 5, 2]},

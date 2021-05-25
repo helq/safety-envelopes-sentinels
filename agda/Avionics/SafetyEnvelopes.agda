@@ -9,7 +9,7 @@ open import Data.Nat using (ℕ; zero; suc)
 open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Relation.Binary.PropositionalEquality
-    using (_≡_; _≢_; refl; cong; subst; sym; trans)
+    using (_≡_; _≢_; refl; cong; subst; sym)
 open import Relation.Unary using (_∈_)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (fromWitnessFalse)
@@ -19,7 +19,7 @@ open import Avionics.Real
            1/_;
            0ℝ; 1ℝ; 2ℝ; 1/2; _^2; √_; fromℕ)
 --open import Avionics.Product using (_×_; ⟨_,_⟩; proj₁; proj₂)
-open import Avionics.Probability using (Dist; NormalDist; ND)
+open import Avionics.Probability using (Dist; NormalDist; ND; BiNormalDist)
 
 sum : List ℝ → ℝ
 sum = foldl _+_ 0ℝ
@@ -28,15 +28,38 @@ inside : NormalDist → ℝ → ℝ → Bool
 inside nd z x = ((μ - z * σ) <ᵇ x) ∧ (x <ᵇ (μ + z * σ))
   where open NormalDist nd using (μ; σ)
 
+mahalanobis1 : ℝ → ℝ → ℝ → ℝ
+mahalanobis1 u v IV = √((u - v) * IV * (u - v))
+
+inside' : NormalDist → ℝ → ℝ → Bool
+inside' nd z x = mahalanobis1 μ x σ²-¹ <ᵇ z
+  where open NormalDist nd using (μ; σ)
+        σ²-¹ = 1/ (σ * σ)
+
+mahalanobis2 : (ℝ × ℝ) → (ℝ × ℝ) → (ℝ × ℝ × ℝ × ℝ) → ℝ
+--mahalanobis2 u v VI = ...
+mahalanobis2 ⟨ u₁ , u₂ ⟩ ⟨ v₁ , v₂ ⟩
+            ⟨ iv₁₁ , ⟨ iv₁₂ , ⟨ iv₂₁ , iv₂₂ ⟩ ⟩ ⟩ = √ ⟨u-v⟩IV⟨u-v⟩'
+  where x₁ = u₁ - v₁
+        x₂ = u₂ - v₂
+        ⟨u-v⟩IV⟨u-v⟩' = (x₁ * x₁ * iv₁₁ + x₁ * x₂ * iv₁₂
+                        + x₁ * x₂ * iv₂₁ + x₂ * x₂ * iv₂₂)
+
+insideBiv : BiNormalDist → ℝ → (ℝ × ℝ) → Bool
+insideBiv bnd z x = mahalanobis2 μ x Σ-¹ <ᵇ z
+  where open BiNormalDist bnd using (μ; Σ-¹)
+
+FlightState = (ℝ × ℝ)
+
 record Model : Set where
   field
-    -- Angles of attack and airspeed available in the model
-    SM : List (ℝ × ℝ)
-    -- Map from angles of attack and airspeeds to Normal Distributions
-    fM : List ((ℝ × ℝ) × (NormalDist × ℝ))
-    -- Every pair of angle of attack and airspeed must be represented in the map fM
-    .fMisMap₁ : All (λ ⟨α,v⟩ → Any (λ ⟨α,v⟩,ND → proj₁ ⟨α,v⟩,ND ≡ ⟨α,v⟩) fM ) SM
-    .fMisMap₂ : All (λ ⟨α,v⟩,ND → Any (λ ⟨α,v⟩ → proj₁ ⟨α,v⟩,ND ≡ ⟨α,v⟩) SM ) fM
+    -- Flight states
+    SM : List FlightState
+    -- Map from flight states to Normal Distributions
+    fM : List (FlightState × (NormalDist × ℝ))
+    -- Every flight state must be represented in the map fM
+    .fMisMap₁ : All (λ θ → Any (λ θ,ND → proj₁ θ,ND ≡ θ) fM ) SM
+    .fMisMap₂ : All (λ θ,ND → Any (λ θ → proj₁ θ,ND ≡ θ) SM ) fM
     .lenSM>0 : length SM ≢ 0
     --.lenfM>0 : length fM ≢ 0 -- this is the result of the bijection above and .lenSM>0
 
@@ -51,16 +74,16 @@ z-predictable M z x = z-predictable' (map (proj₁ ∘ proj₂) (Model.fM M)) z 
 sample-z-predictable : List NormalDist → ℝ → ℝ → List ℝ → Maybe (ℝ × ℝ × Bool)
 sample-z-predictable nds zμ zσ [] = nothing
 sample-z-predictable nds zμ zσ (_ ∷ []) = nothing
-sample-z-predictable nds zμ zσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any inside' nds ⟩ ⟩
+sample-z-predictable nds zμ zσ xs@(_ ∷ _ ∷ _) = just ⟨ mean , ⟨ var_est , any inside'' nds ⟩ ⟩
   where
     n = fromℕ (length xs)
 
     mean = (sum xs ÷ n)
     var_est = (sum (map (λ{x →(x - mean)^2}) xs) ÷ (n - 1ℝ))
 
-    inside' : NormalDist → Bool
-    inside' nd = ((μ - zμ * σ) <ᵇ mean) ∧ (mean <ᵇ (μ + zμ * σ))
-              ∧ (σ^2 - zσ * std[σ^2] <ᵇ var) ∧ (var <ᵇ σ^2 + zσ * std[σ^2])
+    inside'' : NormalDist → Bool
+    inside'' nd = ((μ - zμ * σ) <ᵇ mean) ∧ (mean <ᵇ (μ + zμ * σ))
+                ∧ (σ^2 - zσ * std[σ^2] <ᵇ var) ∧ (var <ᵇ σ^2 + zσ * std[σ^2])
       where open NormalDist nd using (μ; σ)
             σ^2 = σ ^2
             --Var[σ^2] = 2 * (σ^2)^2 / n
@@ -82,14 +105,14 @@ P[stall]f⟨_|stall⟩_ : ℝ → List (ℝ × ℝ × Dist ℝ) → ℝ
 P[stall]f⟨ x |stall⟩ pbs = sum (map unpack pbs)
   where
     unpack : ℝ × ℝ × Dist ℝ → ℝ
-    unpack ⟨ P[⟨α,v⟩] , ⟨ P[stall|⟨α,v⟩] , dist ⟩ ⟩ = pdf x * P[⟨α,v⟩] * P[stall|⟨α,v⟩]
+    unpack ⟨ P[θ] , ⟨ P[stall|θ] , dist ⟩ ⟩ = pdf x * P[θ] * P[stall|θ]
       where open Dist dist using (pdf)
 
 f⟨_⟩_ : ℝ → List (ℝ × ℝ × Dist ℝ) → ℝ
 f⟨ x ⟩ pbs = sum (map unpack pbs)
   where
     unpack : ℝ × ℝ × Dist ℝ → ℝ
-    unpack ⟨ P[⟨α,v⟩] , ⟨ _ , dist ⟩ ⟩ = pdf x * P[⟨α,v⟩]
+    unpack ⟨ P[θ] , ⟨ _ , dist ⟩ ⟩ = pdf x * P[θ]
       where open Dist dist using (pdf)
 
 -- There should be a proof showing that the resulting value will always be in the interval [0,1]

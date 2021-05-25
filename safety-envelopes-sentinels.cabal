@@ -7,7 +7,7 @@ cabal-version: 1.12
 -- hash: 503297da459da542d038274321ecdc9f2a031ad1d6b984a12b6572640199e8d4
 
 name:           safety-envelopes-sentinels
-version:        0.1.1.0
+version:        0.1.2.0
 description:    Please see the README on GitHub at <https://github.com/helq/safety-envelopes-sentinels#readme>
 homepage:       https://github.com/helq/safety-envelopes-sentinels#readme
 bug-reports:    https://github.com/helq/safety-envelopes-sentinels/issues

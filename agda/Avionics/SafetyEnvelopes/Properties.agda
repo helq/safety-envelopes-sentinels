@@ -8,7 +8,8 @@ open import Data.Maybe using (Maybe; just; nothing; is-just; _>>=_)
 open import Data.Product as Prod using (∃-syntax; _×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (_∘_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; cong₂; inspect; [_]; sym; trans)
+open import Relation.Binary.PropositionalEquality as Eq using (_≡_; refl; cong; cong₂; inspect; [_]; sym; trans)
+open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; _≡˘⟨_⟩_; _≡⟨_⟩_; _∎)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Nullary.Decidable using (toWitness; fromWitness)
 open import Relation.Unary using (_∈_)
@@ -16,15 +17,18 @@ open import Relation.Unary using (_∈_)
 open import Avionics.Bool using (≡→T; T∧→×; ×→T∧; lem∧)
 open import Avionics.List using (≡→any; any-map; any-map-rev; any→≡)
 open import Avionics.Real
-    using (ℝ; _+_; _-_; _*_; _÷_; _^_; _<ᵇ_; _≤_; _<_; _<?_; _≤?_; _≢0;
-           0ℝ; 1ℝ; 2ℝ; 1/2; _^2; √_; fromℕ;
+    using (ℝ; _+_; _-_; -_; _*_; _÷_; _^_; _<ᵇ_; _≤_; _<_; _<?_; _≤?_; _≢0;
+           0ℝ; 1ℝ; 2ℝ; 1/2; abs; 1/_; _^2; √_; fromℕ;
            double-neg;
            ⟨0,∞⟩; [0,∞⟩;
            <-transˡ; 2>0; ⟨0,∞⟩→0<; 0<→⟨0,∞⟩; >0→≢0; >0→≥0;
-           0≟0≡yes0≡0)
+           0≟0≡yes0≡0;
+           abs<x→<x∧-x<; neg-involutive; neg-distrib-+; neg-mono-<->; neg-def; m-m≡0;
+           +-comm; +-assoc; *-comm; *-assoc; +-monoˡ-<; m÷n<o≡m<o*n; m<o÷n≡m*n<o; neg-distribˡ-*; √x^2≡absx;
+           x*x≡x^2; x^2*y^2≡⟨xy⟩^2; 1/x^2≡⟨1/x⟩^2)
 open import Avionics.Probability using (NormalDist; Dist)
 open import Avionics.SafetyEnvelopes
-    using (inside; z-predictable'; P[_|X=_]_; classify''; classify; M→pbs;
+    using (inside; inside'; mahalanobis1; z-predictable'; P[_|X=_]_; classify''; classify; M→pbs;
            StallClasses; Stall; NoStall; Uncertain;
            no-uncertain;
            safety-envelope; z-predictable; Model; τ-confident;
@@ -47,8 +51,123 @@ pi nd z x =  (μ nd) - z * (σ nd) < x
 extractDists : Model → List NormalDist
 extractDists M = List.map (proj₁ ∘ proj₂) (Model.fM M)
 
------------------------------- Starting point - Theorem 1 ------------------------------
--- Proof of Theorem 1 (paper)
+------------------------------ Starting point - Theorem 2 ------------------------------
+-- Theorem 1 says:
+-- In the case of univariate normal distributions, the z-predictability condition
+-- >   mahalanobis(μ, x, σ²-¹) < z 
+-- reduces to
+-- >   μ - zσ < x <ᵇ (μ + zσ)
+-- the prediction interval with a z-score of z
+z-pred-interval≡mahalanobis<z : ∀ (nd z x)
+                              → inside nd z x ≡ inside' nd z x
+z-pred-interval≡mahalanobis<z nd z x =
+  begin
+    inside nd z x
+  ≡⟨⟩
+    (u - z * s <ᵇ x) ∧ (x <ᵇ (u + z * s))
+  ≡⟨ cong (λ e → ((u - z * s) <ᵇ x) ∧ (x <ᵇ e)) (
+    begin
+      u + z * s
+    ≡˘⟨ cong₂ (_+_) (neg-involutive _) (neg-involutive _) ⟩
+      -(- u) + -(-(z * s))
+    ≡˘⟨ neg-distrib-+ _ _ ⟩
+      -((- u) + (- (z * s)))
+    ≡⟨⟩
+      -(- u - z * s)
+    ∎
+  ) ⟩
+    (u - z * s <ᵇ x) ∧ (x <ᵇ -(- u - z * s))
+  ≡⟨ cong (λ e → (e <ᵇ x) ∧ (x <ᵇ -(- u - z * s))) (
+    begin
+      u - z * s
+    ≡˘⟨ cong (_+ (- (z * s))) (neg-involutive _) ⟩
+      -(- u) + (- (z * s))
+    ≡˘⟨ neg-distrib-+ _ _ ⟩
+      -(- u + z * s)
+    ∎
+  ) ⟩
+    (-(- u + z * s) <ᵇ x) ∧ (x <ᵇ -(- u - z * s))
+  ≡˘⟨ cong (λ e → (-(- u + z * s) <ᵇ e) ∧ (e <ᵇ -(- u - z * s))) (neg-involutive _) ⟩
+    (-(- u + z * s) <ᵇ -(- x)) ∧ (-(- x) <ᵇ -(- u - z * s))
+  ≡˘⟨ cong ((-(- u + z * s) <ᵇ -(- x)) ∧_) (neg-mono-<-> _ _) ⟩
+    (-(- u + z * s) <ᵇ -(- x)) ∧ (- u - z * s <ᵇ - x)
+  ≡˘⟨ cong (_∧ (- u - z * s <ᵇ - x)) (neg-mono-<-> _ _) ⟩
+    (- x <ᵇ - u + z * s) ∧ (- u - z * s <ᵇ - x)
+  ≡⟨ cong (_∧ (- u - z * s <ᵇ - x)) (
+    begin
+      - x <ᵇ - u + z * s
+    ≡˘⟨ cong (_<ᵇ - u + z * s) (neg-def _) ⟩
+      0ℝ - x <ᵇ - u + z * s
+    ≡˘⟨ cong (λ e → e - x <ᵇ - u + z * s) (trans (+-comm _ _) (m-m≡0 _)) ⟩
+      (- u + u) - x <ᵇ - u + z * s
+    ≡˘⟨ cong (_<ᵇ - u + z * s) (+-assoc _ _ _) ⟩
+      (- u) + (u - x) <ᵇ - u + z * s
+    ≡˘⟨ +-monoˡ-< _ _ _ ⟩
+      u - x <ᵇ z * s
+    ∎
+  ) ⟩
+    (u - x <ᵇ z * s) ∧ (- u - z * s <ᵇ - x)
+  ≡⟨ cong ((u - x <ᵇ z * s) ∧_) (
+    begin
+      - u - z * s <ᵇ - x
+    ≡˘⟨ cong (- u - z * s <ᵇ_) (neg-def _) ⟩
+      - u - z * s <ᵇ 0ℝ - x
+    ≡˘⟨ cong (λ e → - u - z * s <ᵇ e - x) (trans (+-comm _ _) (m-m≡0 _)) ⟩
+      - u - z * s <ᵇ (- u + u) - x
+    ≡˘⟨ cong (- u - z * s <ᵇ_) (+-assoc _ _ _) ⟩
+      - u - z * s <ᵇ - u + (u - x)
+    ≡˘⟨ +-monoˡ-< _ _ _ ⟩
+      - (z * s) <ᵇ u - x
+    ∎
+  ) ⟩
+    (u - x <ᵇ z * s) ∧ (- (z * s) <ᵇ u - x)
+  ≡˘⟨ cong ((u - x <ᵇ z * s) ∧_) (
+    begin
+      - z <ᵇ (u - x) ÷ s
+    ≡⟨ m<o÷n≡m*n<o _ _ _ ⟩
+      (- z) * s <ᵇ (u - x)
+    ≡˘⟨ cong (_<ᵇ (u - x)) (neg-distribˡ-* _ _) ⟩
+      - (z * s) <ᵇ u - x
+    ∎
+  ) ⟩
+    (u - x <ᵇ z * s) ∧ (- z <ᵇ (u - x) ÷ s)
+  ≡˘⟨ cong (_∧ (- z <ᵇ (u - x) ÷ s)) (m÷n<o≡m<o*n _ _ _) ⟩
+    ((u - x) ÷ s <ᵇ z) ∧ (- z <ᵇ (u - x) ÷ s)
+  ≡˘⟨ abs<x→<x∧-x< ⟩
+    abs ((u - x) ÷ s) <ᵇ z
+  ≡˘⟨ cong (_<ᵇ z) (√x^2≡absx _) ⟩
+    √(((u - x) ÷ s)^2) <ᵇ z
+  ≡⟨⟩
+    √(((u - x) * (1/ s))^2) <ᵇ z
+  ≡˘⟨ cong (λ e → √ e <ᵇ z) (
+    begin
+      (u - x) * (1/ (s * s)) * (u - x)
+    ≡⟨ *-comm _ _ ⟩
+      (u - x) * ((u - x) * (1/ (s * s)))
+    ≡⟨ *-assoc _ _ _ ⟩
+      (u - x) * (u - x) * (1/ (s * s))
+    ≡⟨ cong (λ e → (u - x) * (u - x) * (1/ e)) (x*x≡x^2 _) ⟩
+      (u - x) * (u - x) * (1/ (s ^2))
+    ≡⟨ cong ((u - x) * (u - x) *_) (1/x^2≡⟨1/x⟩^2 _) ⟩
+      (u - x) * (u - x) * (1/ s) ^2
+    ≡⟨ cong (_* (1/ s) ^2) (x*x≡x^2 _) ⟩
+      (u - x)^2 * (1/ s) ^2
+    ≡⟨ x^2*y^2≡⟨xy⟩^2 _ _ ⟩
+      ((u - x) * (1/ s))^2
+    ∎
+  )⟩
+    √((u - x) * (1/ (s * s)) * (u - x)) <ᵇ z
+  ≡⟨⟩
+    mahalanobis1 u x (1/ (s * s)) <ᵇ z
+  ≡⟨⟩
+    inside' nd z x
+  ∎
+  where u = μ nd
+        s = σ nd
+---- ############ Theorem 1 END ############
+
+------------------------------ Starting point - Theorem 2 ------------------------------
+-- Proof of Theorem 2 (paper)
 --
 -- In words, the Property 1 says that:
 --    The energy signal x is z-predictable iff there exist ⟨α, v⟩ s.t.
@@ -116,21 +235,20 @@ follows-def→ M z x Any[x∈pi-nd-z]M = follows-def→' (extractDists M) z x An
 -- ############ FINAL RESULT - Theorem 1 ############
 
 -- In words: Given a Model `M` and parameter `z`, if `x` is z-predictable, then
--- there exists a pair ⟨α,v⟩ (angle of attack and velocity) such that they are
--- associated to a `nd` (Normal Distribution) and `x` falls withing the
--- Predictable Interval
+-- there exists θ (a flight state) such that they are associated to a `nd`
+-- (Normal Distribution) and `x` falls withing the Predictable Interval
 theorem1← : ∀ (M z x)
           → z-predictable M z x ≡ ⟨ x , true ⟩
-          → Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
+          → Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
 theorem1← M z x res≡x,true = any-map (proj₁ ∘ proj₂) (follows-def← M z x res≡x,true)
 
 -- The reverse of theorem1←
 theorem1→ : ∀ (M z x)
-          → Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
+          → Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
           → z-predictable M z x ≡ ⟨ x , true ⟩
-theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M = follows-def→ M z x (any-map-rev (proj₁ ∘ proj₂) Any[⟨α,v⟩→x∈pi-nd-z]M)
+theorem1→ M z x Any[θ→x∈pi-nd-z]M = follows-def→ M z x (any-map-rev (proj₁ ∘ proj₂) Any[θ→x∈pi-nd-z]M)
 
--- ################# Theorem 1 END ##################
+-- ################# Theorem 2 END ##################
 
 ------------------------------ Starting point - Theorem 2 ------------------------------
 lem← : ∀ (pbs τ x k)
@@ -222,8 +340,8 @@ prop2M→ : ∀ (M τ x k)
 prop2M→ M τ x Stall   (inj₁ k≡Stall)   cMτx≡k = cong no-uncertain cMτx≡k
 prop2M→ M τ x NoStall (inj₂ k≡NoStall) cMτx≡k = cong no-uncertain cMτx≡k
 
----- ############ FINAL RESULT - Theorem 2 ############
--- Theorem 2 says:
+---- ############ FINAL RESULT - Theorem 3 ############
+-- Theorem 3 says:
 -- a classification k is τ-confident iff τ ≤ P[ k | X = x ]
 theorem2← : ∀ (M τ x)
           → τ-confident M τ x ≡ true
@@ -239,14 +357,14 @@ theorem2→ : ∀ (M τ x k)
           → τ-confident M τ x ≡ true
 theorem2→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩ =
     prop2M→ M τ x k k≢Uncertain (prop2M-prior→ M τ x k 1/2<τ≤1 ⟨p,⟩)
----- ############ Theorem 2 END ############
+---- ############ Theorem 3 END ############
 
 ------------------------------ Starting point - Theorem 3 ------------------------------
----- ############ FINAL RESULT - Theorem 3 ############
+---- ############ FINAL RESULT - Theorem 4 ############
 -- The final theorem is more a corolary. It follows from Theorem 1 and 2
 prop3M← : ∀ (M z τ x)
         → safety-envelope M z τ x ≡ true
-        → (Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
+        → (Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
           × ∃[ k ] (∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)))
 prop3M← M z τ x seM≡true = let
     -- Taking from the safety-envelope definition its components
@@ -260,11 +378,11 @@ prop3M← M z τ x seM≡true = let
 prop3M→ : ∀ (M z τ x k)
         → (1/2 < τ × τ ≤ 1ℝ)
         → k ≡ Stall ⊎ k ≡ NoStall
-        → (Any (λ{⟨ ⟨α,v⟩ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
+        → (Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
           × ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
         → safety-envelope M z τ x ≡ true
-prop3M→ M z τ x k 1/2<τ≤1 k≢Uncertain ⟨ Any[⟨α,v⟩→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
-  z-pred≡⟨x,true⟩ = theorem1→ M z x Any[⟨α,v⟩→x∈pi-nd-z]M
+prop3M→ M z τ x k 1/2<τ≤1 k≢Uncertain ⟨ Any[θ→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
+  z-pred≡⟨x,true⟩ = theorem1→ M z x Any[θ→x∈pi-nd-z]M
   τ-conf          = theorem2→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩
   in cong₂ (_∧_) (cong proj₂ z-pred≡⟨x,true⟩) τ-conf
----- ############ Theorem 3 END ############
+---- ############ Theorem 4 END ############
