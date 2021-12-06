@@ -1,0 +1,7 @@
+Combined
+z=4.0
+tau=0.9587924776275982
+Coverage (for max) = 0.9244987621619255
+Accuracy (for max) = 0.9218422906313187
+Error (for max)    = 0.002656471530606738
+Combined (for max) = 0.8511377392033539

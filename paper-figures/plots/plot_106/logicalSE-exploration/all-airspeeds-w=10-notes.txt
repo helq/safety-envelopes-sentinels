@@ -1,0 +1,5 @@
+Max for combined z = 0.5253012048192771
+Max for combined coverage = 0.4893933132670753
+Max for combined accuracy = 0.48040763456568913
+Max for combined error    = 0.00898567870138619
+Max for combined combined = 0.43894409039097776

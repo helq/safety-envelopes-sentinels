@@ -1,0 +1,7 @@
+Quality
+z=0.45
+tau=0.8650837290553639
+Coverage (for max) = 0.7907944600736202
+Accuracy (for max) = 0.7489828295825764
+Error (for max)    = 0.04181163049104372
+Quality (for max) =  0.4886307707366512
