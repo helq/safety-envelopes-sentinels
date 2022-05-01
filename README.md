@@ -1,6 +1,9 @@
 # Safety Envelopes Sentinel
 
-This project contains the Agda and Haskell code mentioned in the [paper](http://wcl.cs.rpi.edu/bib/Year/2020.complete.html#cruz-dddas-2020).
+This project contains the Agda and Haskell code mentioned in the paper: Formal Safety
+Conditions for Provably Accurate State Classification by Probabilistic Flight Models. The
+Agda code contains the formalization of _safety envelopes_. The formal proofs mentioned in
+the paper can be found in the file `agda/Avionics/SafetyEnvelopes/Properties.agda`.
 
 ## To compile
 

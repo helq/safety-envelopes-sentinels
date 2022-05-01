@@ -237,20 +237,20 @@ follows-def→ M z x Any[x∈pi-nd-z]M = follows-def→' (extractDists M) z x An
 -- In words: Given a Model `M` and parameter `z`, if `x` is z-predictable, then
 -- there exists θ (a flight state) such that they are associated to a `nd`
 -- (Normal Distribution) and `x` falls withing the Predictable Interval
-theorem1← : ∀ (M z x)
+theorem2← : ∀ (M z x)
           → z-predictable M z x ≡ ⟨ x , true ⟩
           → Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
-theorem1← M z x res≡x,true = any-map (proj₁ ∘ proj₂) (follows-def← M z x res≡x,true)
+theorem2← M z x res≡x,true = any-map (proj₁ ∘ proj₂) (follows-def← M z x res≡x,true)
 
--- The reverse of theorem1←
-theorem1→ : ∀ (M z x)
+-- The reverse of theorem2←
+theorem2→ : ∀ (M z x)
           → Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M)
           → z-predictable M z x ≡ ⟨ x , true ⟩
-theorem1→ M z x Any[θ→x∈pi-nd-z]M = follows-def→ M z x (any-map-rev (proj₁ ∘ proj₂) Any[θ→x∈pi-nd-z]M)
+theorem2→ M z x Any[θ→x∈pi-nd-z]M = follows-def→ M z x (any-map-rev (proj₁ ∘ proj₂) Any[θ→x∈pi-nd-z]M)
 
 -- ################# Theorem 2 END ##################
 
------------------------------- Starting point - Theorem 2 ------------------------------
+------------------------------ Starting point - Theorem 3 ------------------------------
 lem← : ∀ (pbs τ x k)
      → classify'' pbs τ x ≡ k
      → k ≡ Uncertain ⊎ ∃[ p ] ((P[ k |X= x ] pbs ≡ just p) × (τ ≤ p))
@@ -307,82 +307,81 @@ lem→ pbs τ x NoStall 1/2<τ≤1 ⟨ p , ⟨ P[k|X=x]≡justp , τ≤p ⟩ ⟩
   in lem→' pbs τ x (1ℝ - p) assumptions P[S|X=x]≡just1-p τ≤1-⟨1-p⟩
   where postulate 0≤p≤1 : (0ℝ ≤ 1ℝ - p × 1ℝ - p ≤ 1ℝ)
 
-prop2M-prior← : ∀ (M τ x k)
+prop3M-prior← : ∀ (M τ x k)
               → classify M τ x ≡ k
               → k ≡ Uncertain ⊎ ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
-prop2M-prior← M = lem← (M→pbs M)
+prop3M-prior← M = lem← (M→pbs M)
 
-prop2M-prior←' : ∀ (M τ x k)
+prop3M-prior←' : ∀ (M τ x k)
                → k ≡ Stall ⊎ k ≡ NoStall
                → classify M τ x ≡ k
                → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
-prop2M-prior←' M τ x k _ cMτx≡k with prop2M-prior← M τ x k cMτx≡k
-prop2M-prior←' _ _ _ Stall   (inj₁ _) _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
-prop2M-prior←' _ _ _ NoStall _        _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
+prop3M-prior←' M τ x k _ cMτx≡k with prop3M-prior← M τ x k cMτx≡k
+prop3M-prior←' _ _ _ Stall   (inj₁ _) _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
+prop3M-prior←' _ _ _ NoStall _        _ | inj₂ P[k|X=x]≥τ = P[k|X=x]≥τ
 
-prop2M-prior→ : ∀ (M τ x k)
+prop3M-prior→ : ∀ (M τ x k)
               → (1/2 < τ × τ ≤ 1ℝ)
               → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
               → classify M τ x ≡ k
-prop2M-prior→ M τ x k 1/2<τ≤1 = lem→ (M→pbs M) τ x k 1/2<τ≤1
+prop3M-prior→ M τ x k 1/2<τ≤1 = lem→ (M→pbs M) τ x k 1/2<τ≤1
 
-prop2M← : ∀ (M τ x)
+prop3M← : ∀ (M τ x)
        → τ-confident M τ x ≡ true
        → ∃[ k ] ((classify M τ x ≡ k) × (k ≡ Stall ⊎ k ≡ NoStall))
-prop2M← M τ x τconf≡true with classify M τ x
+prop3M← M τ x τconf≡true with classify M τ x
 ... | Stall   = ⟨ Stall ,   ⟨ refl , inj₁ refl ⟩ ⟩
 ... | NoStall = ⟨ NoStall , ⟨ refl , inj₂ refl ⟩ ⟩
 
-prop2M→ : ∀ (M τ x k)
+prop3M→ : ∀ (M τ x k)
         → k ≡ Stall ⊎ k ≡ NoStall
         → classify M τ x ≡ k
         → τ-confident M τ x ≡ true
-prop2M→ M τ x Stall   (inj₁ k≡Stall)   cMτx≡k = cong no-uncertain cMτx≡k
-prop2M→ M τ x NoStall (inj₂ k≡NoStall) cMτx≡k = cong no-uncertain cMτx≡k
+prop3M→ M τ x Stall   (inj₁ k≡Stall)   cMτx≡k = cong no-uncertain cMτx≡k
+prop3M→ M τ x NoStall (inj₂ k≡NoStall) cMτx≡k = cong no-uncertain cMτx≡k
 
 ---- ############ FINAL RESULT - Theorem 3 ############
 -- Theorem 3 says:
 -- a classification k is τ-confident iff τ ≤ P[ k | X = x ]
-theorem2← : ∀ (M τ x)
+theorem3← : ∀ (M τ x)
           → τ-confident M τ x ≡ true
           → ∃[ k ] (∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))) -- which means: τ ≤ P[ k | X = x ]
-theorem2← M τ x τconf≡true = let -- prop2M-prior← M τ x k (prop2M← M τ x k τconf≡true)
-  ⟨ k , ⟨ cMτx≡k , k≢Uncertain ⟩ ⟩ = prop2M← M τ x τconf≡true
-  in ⟨ k , prop2M-prior←' M τ x k k≢Uncertain cMτx≡k ⟩
+theorem3← M τ x τconf≡true = let -- prop3M-prior← M τ x k (prop3M← M τ x k τconf≡true)
+  ⟨ k , ⟨ cMτx≡k , k≢Uncertain ⟩ ⟩ = prop3M← M τ x τconf≡true
+  in ⟨ k , prop3M-prior←' M τ x k k≢Uncertain cMτx≡k ⟩
 
-theorem2→ : ∀ (M τ x k)
+theorem3→ : ∀ (M τ x k)
           → (1/2 < τ × τ ≤ 1ℝ)
           → k ≡ Stall ⊎ k ≡ NoStall
           → ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)) -- which means: τ ≤ P[ k | X = x ]
           → τ-confident M τ x ≡ true
-theorem2→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩ =
-    prop2M→ M τ x k k≢Uncertain (prop2M-prior→ M τ x k 1/2<τ≤1 ⟨p,⟩)
+theorem3→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩ =
+    prop3M→ M τ x k k≢Uncertain (prop3M-prior→ M τ x k 1/2<τ≤1 ⟨p,⟩)
 ---- ############ Theorem 3 END ############
 
 ------------------------------ Starting point - Theorem 3 ------------------------------
----- ############ FINAL RESULT - Theorem 4 ############
--- The final theorem is more a corolary. It follows from Theorem 1 and 2
-prop3M← : ∀ (M z τ x)
+-- The final theorem is more a corolary. It follows from Theorem 2 and 3
+prop4M← : ∀ (M z τ x)
         → safety-envelope M z τ x ≡ true
         → (Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
           × ∃[ k ] (∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p)))
-prop3M← M z τ x seM≡true = let
+prop4M← M z τ x seM≡true = let
     -- Taking from the safety-envelope definition its components
     ⟨ left , τ-conf ⟩ =
               lem∧ {a = proj₂ (z-predictable M z x)}
                    {b = τ-confident M τ x}
                    seM≡true
     z-pred-x≡⟨x,true⟩ = cong (⟨ x ,_⟩) left
-  in ⟨ theorem1← M z x z-pred-x≡⟨x,true⟩ , theorem2← M τ x τ-conf ⟩
+  in ⟨ theorem2← M z x z-pred-x≡⟨x,true⟩ , theorem3← M τ x τ-conf ⟩
 
-prop3M→ : ∀ (M z τ x k)
+prop4M→ : ∀ (M z τ x k)
         → (1/2 < τ × τ ≤ 1ℝ)
         → k ≡ Stall ⊎ k ≡ NoStall
         → (Any (λ{⟨ θ , ⟨ nd , p ⟩ ⟩ → x ∈ pi nd z}) (Model.fM M))
           × ∃[ p ] (((P[ k |X= x ] (M→pbs M)) ≡ just p) × (τ ≤ p))
         → safety-envelope M z τ x ≡ true
-prop3M→ M z τ x k 1/2<τ≤1 k≢Uncertain ⟨ Any[θ→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
-  z-pred≡⟨x,true⟩ = theorem1→ M z x Any[θ→x∈pi-nd-z]M
-  τ-conf          = theorem2→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩
+prop4M→ M z τ x k 1/2<τ≤1 k≢Uncertain ⟨ Any[θ→x∈pi-nd-z]M , ⟨p,⟩ ⟩ = let
+  z-pred≡⟨x,true⟩ = theorem2→ M z x Any[θ→x∈pi-nd-z]M
+  τ-conf          = theorem3→ M τ x k 1/2<τ≤1 k≢Uncertain ⟨p,⟩
   in cong₂ (_∧_) (cong proj₂ z-pred≡⟨x,true⟩) τ-conf
 ---- ############ Theorem 4 END ############

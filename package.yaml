@@ -3,7 +3,7 @@ version:             0.1.2.0
 github:              "helq/safety-envelopes-sentinels"
 license:             BSD3
 author:              "Elkin Cruz"
-copyright:           "2020 Elkin Cruz"
+copyright:           "2020-2021 Rensselaer Polytechnic Institute"
 
 extra-source-files:
 - README.md
